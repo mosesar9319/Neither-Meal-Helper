@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   const db = admin();
   // Claim the sign-up atomically so repeated calls send nothing.
   const { data: s } = await db
-    .from('signups')
+    .from('meal_signups')
     .update({ notified_at: new Date().toISOString() })
     .eq('edit_token', editToken)
     .is('notified_at', null)
@@ -22,9 +22,9 @@ Deno.serve(async (req) => {
   if (!s) return json({ ok: true });
 
   const [{ data: board }, { data: priv }, { data: owner }] = await Promise.all([
-    db.from('boards').select('slug, family_name, details').eq('id', s.board_id).single(),
-    db.from('board_private').select('address, instructions, phone, organizer_email').eq('board_id', s.board_id).single(),
-    db.from('managers').select('token').eq('board_id', s.board_id).eq('role', 'owner').maybeSingle(),
+    db.from('meal_boards').select('slug, family_name, details').eq('id', s.board_id).single(),
+    db.from('meal_board_private').select('address, instructions, phone, organizer_email').eq('board_id', s.board_id).single(),
+    db.from('meal_managers').select('token').eq('board_id', s.board_id).eq('role', 'owner').maybeSingle(),
   ]);
   if (!board || !priv) return json({ ok: true });
 

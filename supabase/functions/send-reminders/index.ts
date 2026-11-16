@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   const db = admin();
   const day = tomorrowInIsrael();
   const { data: rows, error } = await db
-    .from('signups')
+    .from('meal_signups')
     .select('id, board_id, meal_date, slot, name, email, dish, edit_token')
     .eq('meal_date', day)
     .is('reminder_sent_at', null)
@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
   let sent = 0;
   for (const s of rows ?? []) {
     const [{ data: board }, { data: priv }] = await Promise.all([
-      db.from('boards').select('family_name, details').eq('id', s.board_id).single(),
-      db.from('board_private').select('address, instructions, phone').eq('board_id', s.board_id).single(),
+      db.from('meal_boards').select('family_name, details').eq('id', s.board_id).single(),
+      db.from('meal_board_private').select('address, instructions, phone').eq('board_id', s.board_id).single(),
     ]);
     if (!board || !priv) continue;
     const ok = await sendEmail(
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
         ${button(`${SITE_URL}/s/${s.edit_token}`, 'עריכה או ביטול · Edit or cancel')}`),
     );
     if (ok) {
-      await db.from('signups').update({ reminder_sent_at: new Date().toISOString() }).eq('id', s.id);
+      await db.from('meal_signups').update({ reminder_sent_at: new Date().toISOString() }).eq('id', s.id);
       sent++;
     }
   }

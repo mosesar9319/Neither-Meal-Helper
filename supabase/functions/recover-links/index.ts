@@ -12,13 +12,13 @@ Deno.serve(async (req) => {
   const db = admin();
   // Case-insensitive exact match: escape LIKE wildcards so "%" or "_" can't widen it.
   const pattern = email.trim().replace(/[\\%_]/g, (c) => `\\${c}`);
-  const { data: rows } = await db.from('board_private').select('board_id').ilike('organizer_email', pattern).limit(30);
+  const { data: rows } = await db.from('meal_board_private').select('board_id').ilike('organizer_email', pattern).limit(30);
   const ids = (rows ?? []).map((r) => r.board_id);
   if (!ids.length) return json({ ok: true });
 
   const [{ data: boards }, { data: owners }] = await Promise.all([
-    db.from('boards').select('id, family_name, start_date').in('id', ids),
-    db.from('managers').select('board_id, token').in('board_id', ids).eq('role', 'owner'),
+    db.from('meal_boards').select('id, family_name, start_date').in('id', ids),
+    db.from('meal_managers').select('board_id, token').in('board_id', ids).eq('role', 'owner'),
   ]);
   const tokenFor = new Map((owners ?? []).map((m) => [m.board_id, m.token]));
   const items = (boards ?? [])

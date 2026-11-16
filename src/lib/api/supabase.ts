@@ -4,17 +4,17 @@ import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate
 
 /**
  * Talks to the database only through the SQL functions in
- * supabase/migrations. Tables are closed to the browser; each function checks
+ * supabase/migrations (all named meal_*). Tables are closed to the browser; each function checks
  * the slug or secret token it is given.
  */
 
 const KNOWN: ApiErrorCode[] = ['not_found', 'slot_full', 'day_closed', 'invalid', 'forbidden'];
 
-export function createSupabaseApi(url: string, anonKey: string): Api {
+export function createSupabaseApi(url: string, anonKey: string, emailEnabled = false): Api {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: false } });
 
   async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
-    const { data, error } = await sb.rpc(fn, args);
+    const { data, error } = await sb.rpc(`meal_${fn}`, args);
     if (error) {
       const code = KNOWN.find((k) => error.message?.includes(k));
       throw new ApiError(code ?? 'unknown', error.message);
@@ -24,6 +24,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
   return {
     mode: 'supabase',
+    emailEnabled,
     createBoard: (input) => rpc('create_board', { p: normalizeBoard(input) }),
     getPublicBoard: (slug) => rpc('get_public_board', { p_slug: slug }),
     signUp: (slug, input) => rpc('sign_up', { p_slug: slug, p: normalizeSignup(input) }),
@@ -38,10 +39,12 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     removeManager: (token, id) => rpc('remove_manager', { p_token: token, p_id: id }),
     markSeen: (token) => rpc('mark_seen', { p_token: token }),
     async recoverLinks(email) {
+      if (!emailEnabled) throw new ApiError('unavailable');
       const { error } = await sb.functions.invoke('recover-links', { body: { email } });
       if (error) throw new ApiError('unknown', error.message);
     },
     async notifySignup(editToken) {
+      if (!emailEnabled) return;
       try {
         await sb.functions.invoke('notify-signup', { body: { editToken } });
       } catch {

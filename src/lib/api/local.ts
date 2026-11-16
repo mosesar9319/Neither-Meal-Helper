@@ -92,6 +92,7 @@ function checkSlot(row: BoardRow, input: Pick<SignupInput, 'date' | 'slot'>, ign
 
 export const localApi: Api = {
   mode: 'local',
+  emailEnabled: false,
 
   async createBoard(input) {
     const db = load();

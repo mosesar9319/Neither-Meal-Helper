@@ -53,7 +53,10 @@ npm run test:db -- -h localhost -p 5432 -U postgres   # SQL tests against a Post
    `VITE_SUPABASE_ANON_KEY` (Project Settings → API).
 
 The browser only calls the SQL functions in the migration; the tables themselves
-are closed to it.
+are closed to it. Every table and function is prefixed `meal_` (helpers live in the
+`meal_private` schema), so the app can share a Supabase project with other apps.
+Supabase's security advisor will flag the `meal_*` functions as callable without
+signing in and the tables as having no policies — both are intentional here.
 
 ### Emails (optional)
 
@@ -72,6 +75,7 @@ supabase secrets set RESEND_API_KEY=... EMAIL_FROM="Neighbors <meals@your-domain
 supabase functions deploy notify-signup send-reminders recover-links
 ```
 
+Then set `VITE_EMAIL_ENABLED=true` in the site's environment so the app calls them.
 Schedule `send-reminders` once a day (for example from Supabase Cron) with the
 header `Authorization: Bearer <CRON_SECRET>`. Without these secrets the app
 still works; it just sends no email (the calendar file still carries reminders).
