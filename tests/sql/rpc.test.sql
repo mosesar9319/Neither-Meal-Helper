@@ -142,3 +142,39 @@ begin
 
   raise notice 'ALL DATABASE TESTS PASSED';
 end $$;
+
+reset role;
+
+do $$
+declare
+  n int;
+  r jsonb;
+  start date := current_date + 10;
+  board jsonb := jsonb_build_object(
+    'familyName', 'Levi', 'startDate', start, 'endDate', start + 2,
+    'slots', '["dinner"]'::jsonb, 'perSlot', 1,
+    'blockedDates', '[]'::jsonb,
+    'details', '{"organizerName":"Dana","adults":2}'::jsonb,
+    'private', '{"address":"1 St","instructions":"","phone":"050","organizerEmail":"Dana@Example.com"}'::jsonb);
+begin
+  r := public.meal_create_board(board);
+  select count(*) into n from public.meal_organizer_board_ids('dana@example.com');
+  assert n = 1, 'lowercase address matches stored mixed case';
+  select count(*) into n from public.meal_organizer_board_ids('DANA@EXAMPLE.COM');
+  assert n = 1, 'uppercase address matches';
+  select count(*) into n from public.meal_organizer_board_ids('%@example.com');
+  assert n = 0, 'percent is not a wildcard';
+  select count(*) into n from public.meal_organizer_board_ids('d_na@example.com');
+  assert n = 0, 'underscore is not a wildcard';
+  perform public.meal_delete_board(r->>'manageToken');
+  raise notice 'EMAIL LOOKUP TESTS PASSED';
+end $$;
+
+set role anon;
+do $$ begin
+  begin
+    perform 1 from public.meal_organizer_board_ids('dana@example.com');
+    raise exception 'anon could call meal_organizer_board_ids';
+  exception when insufficient_privilege then null;
+  end;
+end $$;

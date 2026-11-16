@@ -1,0 +1,16 @@
+# Static Vite build. Secrets stay in the Netlify UI, not in this file.
+# Frontend variable names are listed in README.md and HANDOFF.md.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 needs Node 20.19+ or 22.12+. This matches the version the tests ran on.
+  NODE_VERSION = "22"
+
+# SPA fallback, same rule as public/_redirects.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

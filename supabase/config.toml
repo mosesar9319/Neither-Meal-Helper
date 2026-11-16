@@ -1,0 +1,18 @@
+# Local project name for the Supabase CLI. The hosted project ref comes from
+# `supabase link`, not from this file. Secrets are not stored here.
+project_id = "neighbors-meal-circle"
+
+# Link the project, then deploy from this repo so these flags are applied.
+# See HANDOFF.md.
+
+# Called from the browser with the anon key. The platform JWT check stays on.
+[functions.notify-signup]
+verify_jwt = true
+
+[functions.recover-links]
+verify_jwt = true
+
+# pg_cron calls this with CRON_SECRET, which is not a Supabase JWT.
+# The function rejects requests that do not present that secret.
+[functions.send-reminders]
+verify_jwt = false

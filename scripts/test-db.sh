@@ -12,5 +12,7 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
 end $$;
 SQL
-psql "$@" -v ON_ERROR_STOP=1 -q -d "$DB" -f supabase/migrations/20261116000000_init.sql
+for f in supabase/migrations/*.sql; do
+  psql "$@" -v ON_ERROR_STOP=1 -q -d "$DB" -f "$f"
+done
 psql "$@" -v ON_ERROR_STOP=1 -q -d "$DB" -f tests/sql/rpc.test.sql
