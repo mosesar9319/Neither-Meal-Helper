@@ -239,7 +239,7 @@ const en = {
   email: 'Email',
   send: 'Send',
   recoverSent: 'If that email has boards, the links are on their way.',
-  recoverUnavailable: 'Email recovery works once the app is connected to its database.',
+  recoverUnavailable: 'Email recovery isn’t switched on for this site yet.',
   forget: 'Remove from this device',
 
   // General
@@ -490,7 +490,7 @@ const he: Dict = {
   email: 'מייל',
   send: 'שליחה',
   recoverSent: 'אם יש לוחות למייל הזה, הקישורים בדרך.',
-  recoverUnavailable: 'שחזור במייל יעבוד אחרי חיבור האפליקציה למסד הנתונים.',
+  recoverUnavailable: 'שחזור במייל עדיין לא מופעל באתר הזה.',
   forget: 'הסרה מהמכשיר',
 
   cancel: 'ביטול',

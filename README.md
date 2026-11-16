@@ -47,18 +47,22 @@ npm run test:db -- -h localhost -p 5432 -U postgres   # SQL tests against a Post
 
 ## Connect Supabase
 
-1. Create a Supabase project and run `supabase/migrations/20261116000000_init.sql`
-   (`supabase db push`, or paste it into the SQL editor).
+1. In the shared Supabase project, apply every file in `supabase/migrations/`
+   (`supabase db push`, or paste them into the SQL editor in order).
 2. Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and
-   `VITE_SUPABASE_ANON_KEY` (Project Settings → API).
+   `VITE_SUPABASE_ANON_KEY` (Project Settings → API). Use the anon (public) key.
 
 The browser only calls the SQL functions in the migration; the tables themselves
-are closed to it.
+are closed to it. Every table and function is prefixed `meal_` (helpers live in the
+`meal_private` schema), so the app can share a Supabase project with other apps.
+Supabase's security advisor will flag the `meal_*` functions as callable without
+signing in and the tables as having no policies — both are intentional here.
+`meal_organizer_board_ids` is the exception: only the service role may call it.
 
 ### Emails (optional)
 
 Three Edge Functions in `supabase/functions` send email through
-[Resend](https://resend.com):
+[Resend](https://resend.com/docs/api-reference/emails/send-email):
 
 | Function | What it does |
 | --- | --- |
@@ -67,19 +71,47 @@ Three Edge Functions in `supabase/functions` send email through
 | `recover-links` | Emails an organizer the management links for boards opened with their email |
 
 ```bash
-supabase secrets set RESEND_API_KEY=... EMAIL_FROM="Neighbors <meals@your-domain>" \
-  SITE_URL=https://your-site CRON_SECRET=some-long-random-string
-supabase functions deploy notify-signup send-reminders recover-links
+supabase secrets set \
+  RESEND_API_KEY=re_xxxxxxxx \
+  EMAIL_FROM="Neighbors for Neighbors <meals@your-domain.com>" \
+  APP_URL=https://your-site.example \
+  CRON_SECRET="$(openssl rand -hex 32)"
+
+supabase functions deploy notify-signup recover-links send-reminders
 ```
 
-Schedule `send-reminders` once a day (for example from Supabase Cron) with the
-header `Authorization: Bearer <CRON_SECRET>`. Without these secrets the app
-still works; it just sends no email (the calendar file still carries reminders).
+`APP_URL` is the public origin of this site (no trailing slash). `EMAIL_FROM` must
+be an address on a domain you have verified in Resend, either bare or
+`Name <email@domain>`. `CRON_SECRET` is a long random string; it is not a Supabase
+key. `send-reminders` is deployed with `verify_jwt = false` (`supabase/config.toml`)
+and accepts only that secret, because a cron caller does not have a user JWT.
 
-## Deploy
+Then set `VITE_EMAIL_ENABLED=true` on the site and redeploy so the app calls the
+functions. Schedule `send-reminders` once a day at 06:00 UTC (`0 6 * * *`), which
+is 08:00 or 09:00 in Israel. The exact Vault and `pg_cron` statements are in
+`HANDOFF.md`. The request must be a POST with `Authorization: Bearer <CRON_SECRET>`.
 
-`npm run build` produces a static site in `dist/`. Any static host works; the
-host must send unknown paths to `index.html` (`public/_redirects` does this on Netlify).
+Without these secrets the app still works; it just sends no email (the calendar
+file still carries reminders).
+
+## Deploy on Netlify
+
+`netlify.toml` builds with `npm run build`, publishes `dist/`, uses Node 22, and
+rewrites unknown paths to `index.html`. `public/_redirects` repeats that rewrite.
+
+Set these in the Netlify UI (Site configuration → Environment variables) before
+the build. Vite inlines them, so changing one requires a new deploy. Do not
+commit values.
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL` | For a live board | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | For a live board | Supabase anon / public key |
+| `VITE_EMAIL_ENABLED` | No | The literal `true` turns email calls on. Anything else leaves them off |
+
+Leave the Supabase pair empty and the site runs in demo mode. The service-role
+key, Resend key, and cron secret are not frontend variables; they belong in
+Supabase function secrets. `HANDOFF.md` is the operator checklist.
 
 ## Project layout
 
@@ -88,6 +120,7 @@ src/lib/          dates, Jewish calendar, scheduling rules, i18n, data layer (lo
 src/components/   UI kit, calendar, board view, setup form, sign-up pieces
 src/pages/        Home, NewBoard, PublicBoard (/b/:slug), MySignup (/s/:token),
                   Manage (/m/:token), Links (/links)
-supabase/         database migration and email functions
+supabase/         database migrations, email functions, config.toml
 tests/            unit tests and SQL tests
+HANDOFF.md        deploy checklist: Netlify variables, function secrets, cron
 ```

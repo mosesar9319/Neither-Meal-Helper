@@ -1,1 +1,2 @@
+# SPA fallback. Keep this in sync with the [[redirects]] rule in netlify.toml.
 /*  /index.html  200

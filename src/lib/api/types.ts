@@ -29,6 +29,8 @@ export type SignupEdit = Pick<SignupInput, 'name' | 'phone' | 'email' | 'dish' |
 
 export interface Api {
   mode: 'local' | 'supabase';
+  /** True when the email Edge Functions are deployed (VITE_EMAIL_ENABLED=true). */
+  emailEnabled: boolean;
   createBoard(input: BoardInput): Promise<{ slug: string; manageToken: string }>;
   getPublicBoard(slug: string): Promise<PublicBoardData>;
   signUp(slug: string, input: SignupInput): Promise<SignUpResult>;
