@@ -1,7 +1,20 @@
 # Handoff: Neighbors for Neighbors (שכנות למען שכנות)
 
-Status as of 2026-11-16. Repo: `mosesar9319/Neither-Meal-Helper`, branch
+Status as of 2026-11-22. Repo: `mosesar9319/Neither-Meal-Helper`, branch
 `claude/neighborly-meal-circle-redesign-ncgqq2` (everything is committed and pushed; no PR opened).
+
+## Changes on 2026-11-22 (owner's requests)
+
+1. Site name is now "שכנות למען שכנות" (English stays "Neighbors for Neighbors").
+2. Light purple palette (`src/index.css` tokens; green kept for "covered").
+3. **Admin approval for meal requests only.** New boards start `pending`; hidden from
+   the public link and closed to sign-ups until a site admin approves at `/admin`.
+   Decline takes a note shown to the organizer; editing a declined request resubmits it.
+   Approved boards are shared by link only (no public listing). Neighbor sign-ups are
+   not moderated. Admins sign in by email link (Supabase Auth) and must be listed in
+   `meal_admins` with a confirmed email.
+4. **Email reminders** the evening before; email is now required to sign up to cook.
+   pg_cron + pg_net + Vault schedule live in the database; all 5 `meal-*` functions are deployed.
 
 ## What this is
 
@@ -70,6 +83,14 @@ on the device and a `/links` recovery page.
 - Security advisor flags the `meal_*` functions as callable by `anon` and the tables as "RLS enabled, no policy".
   Both are intentional (see 2). It also flags two pre-existing issues in the other app (`is_admin` executable,
   leaked-password protection off); left alone.
+- Migrations applied live: `meal_boards_init`, `meal_approval_admins`, `meal_reminder_schedule`.
+  pg_cron and pg_net were enabled for the reminder job (`meal-send-reminders`, daily 16:07 UTC).
+- Edge Functions deployed (JWT verification off; each checks its caller): meal-notify-request,
+  meal-notify-decision, meal-notify-signup, meal-send-reminders, meal-recover-links. **No Resend
+  secrets yet**, so they run but send nothing.
+- **No admins yet** (`meal_admins` is empty), so nothing can be approved through the UI.
+- One pre-existing real board (family רוזנפלד, Nov 18 – Dec 1) became `pending` when the approval
+  migration added the status column; the owner was asked whether to approve it.
 - **Not deployed anywhere.** No hosting yet; the Netlify connector showed `needs_reconnect` and its tools were
   not available in the session.
 - **Edge Functions not deployed; Resend not configured.**
@@ -91,7 +112,7 @@ on the device and a `/links` recovery page.
 1. **Hosting.** Build with `npm run build`, publish `dist/`. Needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
    set on the host (the `.env` is git-ignored). `public/_redirects` handles SPA routing on Netlify; other hosts need an
    equivalent fallback to `index.html`.
-2. **Email has never been run.** Deploy `notify-signup`, `send-reminders`, `recover-links`; set secrets
+2. **Email has never actually been sent** (no Resend key yet). The plumbing was verified live: CORS, auth refusals, the cron secret, and "tomorrow in Israel". Older notes: Deploy `notify-signup`, `send-reminders`, `recover-links`; set secrets
    `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`, `CRON_SECRET`; schedule `send-reminders` daily with
    `Authorization: Bearer <CRON_SECRET>`; then set `VITE_EMAIL_ENABLED=true`.
    **Likely gotcha (untested):** the browser calls `notify-signup` and `recover-links` with the publishable key,

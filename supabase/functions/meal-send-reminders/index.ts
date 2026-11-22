@@ -1,5 +1,6 @@
 // Daily job: emails every neighbor who is cooking tomorrow (Israel time).
-// Run it on a schedule with the header `Authorization: Bearer <MEAL_CRON_SECRET>`.
+// Called by pg_cron (supabase/setup/meal_reminder_schedule.sql) with a secret kept
+// in Supabase Vault; meal_check_cron_secret verifies it.
 import { SITE_URL, admin, button, cors, dateLabel, deliveryWindow, esc, json, layout, sendEmail, slotLabel } from '../_shared/common.ts';
 
 function tomorrowInIsrael(): string {
@@ -11,10 +12,10 @@ function tomorrowInIsrael(): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  const secret = Deno.env.get('MEAL_CRON_SECRET');
-  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
-
   const db = admin();
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const { data: allowed } = await db.rpc('meal_check_cron_secret', { p_secret: token });
+  if (allowed !== true) return json({ error: 'unauthorized' }, 401);
   const day = tomorrowInIsrael();
   const { data: rows, error } = await db
     .from('meal_signups')
@@ -28,10 +29,11 @@ Deno.serve(async (req) => {
   let sent = 0;
   for (const s of rows ?? []) {
     const [{ data: board }, { data: priv }] = await Promise.all([
-      db.from('meal_boards').select('family_name, details').eq('id', s.board_id).single(),
+      db.from('meal_boards').select('family_name, details, status').eq('id', s.board_id).single(),
       db.from('meal_board_private').select('address, instructions, phone').eq('board_id', s.board_id).single(),
     ]);
-    if (!board || !priv) continue;
+    // No reminders for a board an admin has taken down.
+    if (!board || !priv || board.status !== 'approved') continue;
     const ok = await sendEmail(
       s.email,
       `תזכורת: מחר מבשלים למשפחת ${board.family_name} · Reminder: you're cooking tomorrow`,

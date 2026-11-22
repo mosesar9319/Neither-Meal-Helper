@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       <h2>קישורי הניהול שלך · Your management links</h2>
       <p>שמרו אותם לעצמכם — כל מי שמחזיק קישור יכול לנהל את הלוח.<br>Keep these private — anyone with a link can manage the board.</p>
       <ul>${items}</ul>
-      <p style="color:#6E6359">לא ביקשת? אפשר להתעלם. · Didn't ask for this? You can ignore it.</p>`),
+      <p style="color:#6D6480">לא ביקשת? אפשר להתעלם. · Didn't ask for this? You can ignore it.</p>`),
   );
   return json({ ok: true });
 });

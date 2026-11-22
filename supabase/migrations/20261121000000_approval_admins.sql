@@ -266,6 +266,12 @@ do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'anon') then
     revoke execute on all functions in schema meal_private from anon;
+    -- Supabase grants new public functions to anon by default; take the admin ones back.
+    revoke execute on function
+      public.meal_admin_me(), public.meal_admin_list_requests(text),
+      public.meal_admin_review(text, text, text), public.meal_admin_delete_board(text),
+      public.meal_admin_list_admins(), public.meal_admin_add(text), public.meal_admin_remove(text)
+    from anon;
     grant execute on function public.meal_admin_login_allowed(text) to anon;
   end if;
   if exists (select 1 from pg_roles where rolname = 'authenticated') then
