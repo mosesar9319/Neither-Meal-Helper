@@ -12,6 +12,7 @@ import { Manage } from './pages/Manage';
 import { MyAccount } from './pages/MyAccount';
 import { MySignup } from './pages/MySignup';
 import { NewBoard } from './pages/NewBoard';
+import { Privacy } from './pages/Privacy';
 import { PublicBoard } from './pages/PublicBoard';
 
 const router = createBrowserRouter([
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: '/links', element: <Links /> },
       { path: '/admin', element: <Admin /> },
       { path: '/me', element: <MyAccount /> },
+      { path: '/privacy', element: <Privacy /> },
       { path: '*', element: <NotFoundState /> },
     ],
   },

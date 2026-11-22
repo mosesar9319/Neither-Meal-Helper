@@ -316,6 +316,10 @@ const en = {
   googleHint: 'Optional: continue with Google to fill in your details and see this request on any device.',
   googleError: 'Google sign-in didn’t work. Try again, or continue without signing in.',
   a1Google: 'If you like, you can continue with Google to fill in your details and see your requests on any device.',
+
+  privacyTitle: 'Privacy policy',
+  privacyLinkHe: 'מדיניות פרטיות',
+  privacyLinkEn: 'Privacy',
 } as const;
 
 export type Dict = { [K in keyof typeof en]: string };
@@ -624,6 +628,10 @@ const he: Dict = {
   googleHint: 'לא חובה: המשיכו עם Google כדי למלא את הפרטים ולראות את הבקשה מכל מכשיר.',
   googleError: 'ההתחברות עם Google לא הצליחה. נסו שוב, או המשיכו בלי להתחבר.',
   a1Google: 'אם תרצו, אפשר להמשיך עם Google כדי למלא פרטים ולראות את הבקשות מכל מכשיר.',
+
+  privacyTitle: 'מדיניות פרטיות',
+  privacyLinkHe: 'מדיניות פרטיות',
+  privacyLinkEn: 'Privacy',
 };
 
 const dicts: Record<Lang, Dict> = { en, he };

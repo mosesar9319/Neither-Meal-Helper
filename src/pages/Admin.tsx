@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Check, ExternalLink, Info, LogOut, Mail, Phone, ShieldCheck, Trash2, Undo2, UserPlus, X } from 'lucide-react';
 import { BoardSummary } from '../components/BoardView';
 import { GoogleButton, OrDivider } from '../components/GoogleButton';
-import { LoadingState, Page, useTitle } from '../components/Layout';
+import { LoadingState, Page, PrivacyLink, useTitle } from '../components/Layout';
 import { Badge, Button, Card, Dialog, Field, Spinner, TextArea, TextInput, buttonClass, cx, useConfirm, useToast } from '../components/ui';
 import { ApiError, api } from '../lib/api';
 import { formatDate, formatRange } from '../lib/dates';
@@ -79,6 +79,9 @@ function SignIn() {
             </Button>
           </form>
         )}
+        <p className="text-sm text-muted">
+          <PrivacyLink />
+        </p>
       </Card>
     </Page>
   );
