@@ -88,9 +88,9 @@ on the device and a `/links` recovery page.
 - Edge Functions deployed (JWT verification off; each checks its caller): meal-notify-request,
   meal-notify-decision, meal-notify-signup, meal-send-reminders, meal-recover-links. **No Resend
   secrets yet**, so they run but send nothing.
-- **No admins yet** (`meal_admins` is empty), so nothing can be approved through the UI.
+- Admins listed in `meal_admins`: 2 addresses chosen by the owner (added 2026-11-22). Neither has signed in yet.
 - One pre-existing real board (family רוזנפלד, Nov 18 – Dec 1) became `pending` when the approval
-  migration added the status column; the owner was asked whether to approve it.
+  migration added the status column; the owner chose to leave it waiting for an admin.
 - **Not deployed anywhere.** No hosting yet; the Netlify connector showed `needs_reconnect` and its tools were
   not available in the session.
 - **Edge Functions not deployed; Resend not configured.**
