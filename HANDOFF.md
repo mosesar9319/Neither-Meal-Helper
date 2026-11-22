@@ -43,7 +43,7 @@ approval email, sign-up thank-you and organizer notice. **Pending: the reminder 
    (422 "Signups not allowed"). With it on, anyone can create an Auth account in the shared project and make it send
    confirmation emails from `meals.dafsync.com`. Accounts gain no data access in either app, but it costs email
    reputation and quota. Safer: keep it off and create each new admin's Auth user from the dashboard
-   (Authentication → Users → Add user, email only) when adding them to `meal_admins`. `tirtsa05` has no Auth user yet.
+   (Authentication → Users → Add user, email only) when adding them to `meal_admins`. The second admin has no Auth user yet.
 5. **Decide on a dedicated Supabase project** (see "Shared project"). Recommended before real use grows.
 
 ## Shared Supabase project (read before touching the database)
@@ -67,7 +67,7 @@ approval email, sign-up thank-you and organizer notice. **Pending: the reminder 
 
 - **TEST board** "בדיקה TEST" (slug `61ee215f1792`), with one TEST sign-up for dinner on Nov 23. Delete it after
   tonight's reminder is confirmed.
-- **One real request** (family רוזנפלד, Nov 18 – Dec 1, 1 past sign-up) existed before approvals. When the
+- **One real request** (Nov 18 – Dec 1, 1 past sign-up; the only real `pending` board) existed before approvals. When the
   approval migration added `status`, it became `pending`. The owner chose to leave it waiting for an admin.
   Don't approve or delete it yourself.
 - `meal_admins` holds the 2 emails the owner chose. Add or remove admins only when the owner asks.
