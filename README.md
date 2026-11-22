@@ -1,8 +1,10 @@
-# Neighbors for Neighbors · שכנים למען שכנים
+# Neighbors for Neighbors · שכנות למען שכנות
 
 Organize warm meals for a family in your neighborhood after a birth, during
-illness, or in hard times. An organizer opens a meal board, shares the link in
-the neighborhood WhatsApp group, and neighbors pick a meal to bring. Hebrew
+illness, or in hard times. An organizer sends a meal request; once a site
+administrator approves it, the organizer shares the link in the neighborhood
+WhatsApp group and neighbors pick a meal to bring. Neighbors get an email
+reminder the evening before. Hebrew
 first (right to left), with English, light and dark themes.
 
 ## What's in it
@@ -53,32 +55,67 @@ npm run test:db -- -h localhost -p 5432 -U postgres   # SQL tests against a Post
    `VITE_SUPABASE_ANON_KEY` (Project Settings → API).
 
 The browser only calls the SQL functions in the migration; the tables themselves
-are closed to it.
+are closed to it. Every table and function is prefixed `meal_` (helpers live in the
+`meal_private` schema), so the app can share a Supabase project with other apps.
+Supabase's security advisor will flag the `meal_*` functions as callable without
+signing in and the tables as having no policies — both are intentional here.
 
-### Emails (optional)
+### Admins and approval
 
-Three Edge Functions in `supabase/functions` send email through
-[Resend](https://resend.com):
+New requests start as **pending**: the public link shows nothing and nobody can
+sign up until an admin approves. Admins sign in at `/admin` with an email link
+(Supabase Auth); only emails in `meal_admins` can sign in. Add the first admin
+with SQL, then manage the rest from the page:
+
+```sql
+insert into public.meal_admins (email) values ('someone@example.com');
+```
+
+In Supabase → Authentication → URL Configuration, add the site's `/admin` URL to
+the allowed **Redirect URLs**, or sign-in links will send admins to the project's
+default Site URL.
+
+### Google sign-in (optional)
+
+Anyone can choose "Continue with Google" to fill in their details and see their requests
+and meals on any device at `/me`; admins can use it instead of the email link. It's hidden
+until `VITE_GOOGLE_AUTH_ENABLED=true`. Setup steps (Google OAuth client, Supabase provider,
+redirect URLs) are in `HANDOFF.md`.
+
+### Emails and reminders
+
+Five Edge Functions in `supabase/functions` send email through
+[Resend](https://resend.com). They're deployed with JWT verification off because
+each checks its own caller.
 
 | Function | What it does |
 | --- | --- |
-| `notify-signup` | Tells the organizer about a new sign-up and sends the neighbor a confirmation |
-| `send-reminders` | Run daily: reminds everyone cooking tomorrow (Israel time) |
-| `recover-links` | Emails an organizer the management links for boards opened with their email |
+| `meal-notify-request` | Tells every admin about a new request |
+| `meal-notify-decision` | Tells the organizer about an approval or decline (admin session required) |
+| `meal-notify-signup` | Tells the organizer about a sign-up and confirms to the neighbor |
+| `meal-send-reminders` | Daily: reminds everyone cooking tomorrow (Israel time) |
+| `meal-recover-links` | Emails an organizer their management links |
 
-```bash
-supabase secrets set RESEND_API_KEY=... EMAIL_FROM="Neighbors <meals@your-domain>" \
-  SITE_URL=https://your-site CRON_SECRET=some-long-random-string
-supabase functions deploy notify-signup send-reminders recover-links
-```
+Secrets (prefixed because the project is shared): `MEAL_RESEND_API_KEY`,
+`MEAL_EMAIL_FROM`, `MEAL_SITE_URL`. Then set `VITE_EMAIL_ENABLED=true` for the site.
 
-Schedule `send-reminders` once a day (for example from Supabase Cron) with the
-header `Authorization: Bearer <CRON_SECRET>`. Without these secrets the app
-still works; it just sends no email (the calendar file still carries reminders).
+Every email is claimed before sending and carries a Resend `Idempotency-Key`, so
+retries never deliver twice. Pure email logic lives in `supabase/functions/_shared/logic.ts`
+and is unit-tested; `supabase/config.toml` records the functions' settings.
+
+Paste the bilingual Auth email templates from `supabase/templates/` into Supabase →
+Authentication → Emails (Magic link, Confirm signup).
+
+The daily reminder run is scheduled inside the database with pg_cron
+(`supabase/setup/meal_reminder_schedule.sql`, 16:07 UTC = 18:07 Israel winter
+time). It authenticates with a random secret kept in Supabase Vault.
 
 ## Deploy
 
-`npm run build` produces a static site in `dist/`. Any static host works; the
+Live at https://neighborly-meal-circle.netlify.app. Netlify publishes the `main` branch; open a pull
+request into `main` to get a preview link, and merge it to go live. `netlify.toml` holds the build
+settings and a rule (`scripts/netlify-ignore.sh`) that skips builds for changes that don't affect the
+site. `npm run build` produces a static site in `dist/`. Any static host works; the
 host must send unknown paths to `index.html` (`public/_redirects` does this on Netlify).
 
 ## Project layout

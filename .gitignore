@@ -5,3 +5,7 @@ dist
 *.log
 test-results
 playwright-report
+.netlify
+supabase/.temp
+supabase/.branches
+supabase/functions/.env

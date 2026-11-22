@@ -192,7 +192,7 @@ export function BoardDays({ board, days, onTake, compact }: { board: Board; days
                 onClick={() => pick(v)}
                 className={cx(
                   'inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors',
-                  view === v ? 'bg-ink text-bg' : 'text-muted hover:text-ink',
+                  view === v ? 'bg-primary text-primary-ink shadow-card' : 'text-muted hover:text-ink',
                 )}
               >
                 {v === 'calendar' ? <CalendarDays className="size-4" aria-hidden /> : <List className="size-4" aria-hidden />}

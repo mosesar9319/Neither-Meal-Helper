@@ -58,8 +58,14 @@ export interface OrganizerPrivate extends PrivateDetails {
   organizerEmail: string;
 }
 
+export type BoardStatus = 'pending' | 'approved' | 'declined';
+
 export interface Board {
   slug: string;
+  /** New requests wait for an admin; only approved boards are public. */
+  status: BoardStatus;
+  /** An admin's note to the organizer, e.g. why a request was declined. */
+  reviewNote: string;
   familyName: string;
   startDate: string; // YYYY-MM-DD
   endDate: string;
@@ -110,6 +116,35 @@ export interface Manager {
   id: string;
   name: string;
   role: 'owner' | 'co';
+  createdAt: string;
+}
+
+/** A request as an admin sees it. */
+export interface AdminRequest extends Board {
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string;
+  private: OrganizerPrivate;
+  manageToken: string;
+  signupCount: number;
+}
+
+/** The signed-in person (Continue with Google). */
+export interface AccountUser {
+  email: string;
+  name: string;
+  avatarUrl: string;
+}
+
+/** What a signed-in person sent and signed up for, across devices. */
+export interface MyActivity {
+  boards: { slug: string; familyName: string; status: BoardStatus; startDate: string; endDate: string; createdAt: string; manageToken: string }[];
+  signups: { date: string; slot: MealSlot; dish: string; editToken: string; familyName: string; slug: string }[];
+}
+
+export interface AdminEntry {
+  email: string;
+  addedBy: string;
   createdAt: string;
 }
 

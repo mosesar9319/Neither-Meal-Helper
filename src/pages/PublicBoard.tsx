@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { CheckCircle2, Share2 } from 'lucide-react';
 import { BoardDays, BoardProgress, BoardSummary } from '../components/BoardView';
@@ -12,7 +12,9 @@ import {
   slotDateLabel,
   useSignupForm,
 } from '../components/SignupParts';
+import { GoogleButton } from '../components/GoogleButton';
 import { Button, Card, CopyField, Dialog, buttonClass, useToast } from '../components/ui';
+import { useAccount } from '../lib/account';
 import { ApiError, api } from '../lib/api';
 import { formatDate, formatRange, todayISO } from '../lib/dates';
 import { device } from '../lib/device';
@@ -39,6 +41,11 @@ function SignupDialog({ data, picked, onClose, onDone }: { data: PublicBoardData
   const toast = useToast();
   const { value, setValue, errors, validate } = useSignupForm({ ...device.getContact(), dish: '', note: '' });
   const [busy, setBusy] = useState(false);
+  const { user, loading: accountLoading } = useAccount();
+  // Signed in with Google: fill in name and email if still empty.
+  useEffect(() => {
+    if (user) setValue((v) => ({ ...v, name: v.name || user.name, email: v.email || user.email }));
+  }, [user, setValue]);
 
   const submit = async () => {
     if (!picked || !validate()) return;
@@ -71,6 +78,7 @@ function SignupDialog({ data, picked, onClose, onDone }: { data: PublicBoardData
           className="space-y-5"
         >
           <p className="rounded-2xl bg-primary-soft px-4 py-3 font-medium text-primary">{slotDateLabel(lang, picked.slot, picked.date)}</p>
+          {api.googleEnabled && !accountLoading && !user && <GoogleButton />}
           <PlannedDishes signups={data.signups} />
           <SignupFields value={value} onChange={setValue} errors={errors} />
           <div className="flex justify-end">

@@ -1,0 +1,21 @@
+# Supabase CLI settings (ported from PR #1, adapted). The hosted project is linked
+# with `supabase link --project-ref vipbambqmpjftdzouwsi`; no secrets live here.
+project_id = "neighbors-meal-circle"
+
+# All meal functions check their own callers (tokens, the admin session, or the
+# Vault cron secret), and the browser sends the publishable key, which is not a JWT.
+# They are deployed with JWT verification off; keep it that way on redeploy.
+[functions.meal-notify-request]
+verify_jwt = false
+
+[functions.meal-notify-decision]
+verify_jwt = false
+
+[functions.meal-notify-signup]
+verify_jwt = false
+
+[functions.meal-send-reminders]
+verify_jwt = false
+
+[functions.meal-recover-links]
+verify_jwt = false

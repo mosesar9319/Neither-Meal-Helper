@@ -5,7 +5,10 @@ import type { Api } from './types';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-export const api: Api = url && key ? createSupabaseApi(url, key) : localApi;
+const email = import.meta.env.VITE_EMAIL_ENABLED === 'true';
+const google = import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+
+export const api: Api = url && key ? createSupabaseApi(url, key, email, google) : localApi;
 
 export { ApiError } from './types';
 export type { Api, ApiErrorCode, SignupEdit } from './types';

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
+  AlertCircle,
   CalendarDays,
   ClipboardList,
   ExternalLink,
+  Hourglass,
   LayoutDashboard,
   Lock,
   MessageCircle,
@@ -66,6 +68,27 @@ function openMealsMessage(days: DaySlots<Signup>[], familyName: string, url: str
 
 // ---------------------------------------------------------------- overview
 
+function StatusBanner({ status, note }: { status: ManageData['board']['status']; note: string }) {
+  const { t } = useI18n();
+  if (status === 'approved') return null;
+  const pending = status === 'pending';
+  return (
+    <div role="status" className={cx('flex items-start gap-3 rounded-3xl p-5', pending ? 'bg-primary-soft text-primary' : 'bg-warn-soft text-warn')}>
+      {pending ? <Hourglass className="mt-0.5 size-6 shrink-0" aria-hidden /> : <AlertCircle className="mt-0.5 size-6 shrink-0" aria-hidden />}
+      <div className="space-y-1">
+        <p className="text-lg font-semibold">{pending ? t.statusPendingTitle : t.statusDeclinedTitle}</p>
+        <p>{pending ? t.statusPendingText : t.statusDeclinedText}</p>
+        {note && (
+          <p className="pt-1">
+            <strong className="font-semibold">{t.adminNote}: </strong>
+            {note}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Overview({ data, days, isNew, newCount }: { data: ManageData; days: DaySlots<Signup>[]; isNew: boolean; newCount: number }) {
   const { t, f, lang } = useI18n();
   const toast = useToast();
@@ -77,6 +100,7 @@ function Overview({ data, days, isNew, newCount }: { data: ManageData; days: Day
   const upcoming = data.signups.filter((s) => s.date >= today && s.date <= addDays(today, 3));
   const groupMsg = openMealsMessage(days, data.board.familyName, publicUrl, lang, t.stillOpenText, t.signUpHere);
   const hasOpen = progress.filled < progress.total;
+  const approved = data.board.status === 'approved';
 
   return (
     <div className="space-y-6">
@@ -89,8 +113,10 @@ function Overview({ data, days, isNew, newCount }: { data: ManageData; days: Day
           </div>
         </div>
       )}
+      <StatusBanner status={data.board.status} note={data.board.reviewNote} />
 
       <Card className="space-y-5 p-5 sm:p-6">
+        {approved && (
         <div>
           <p className="mb-2 font-semibold">{t.publicLink}</p>
           <CopyField value={publicUrl} label={t.publicLink} />
@@ -105,7 +131,8 @@ function Overview({ data, days, isNew, newCount }: { data: ManageData; days: Day
             </Link>
           </div>
         </div>
-        <div className="border-t border-line pt-5">
+        )}
+        <div className={cx(approved && 'border-t border-line pt-5')}>
           <p className="mb-2 flex items-center gap-2 font-semibold">
             <Lock className="size-4 text-primary" aria-hidden />
             {t.manageLink}
@@ -147,7 +174,7 @@ function Overview({ data, days, isNew, newCount }: { data: ManageData; days: Day
         </div>
       </Card>
 
-      {hasOpen && (
+      {approved && hasOpen && (
         <Card className="space-y-3 p-5 sm:p-6">
           <h2 className="flex items-center gap-2 text-2xl font-bold">
             <MessageCircle className="size-6 text-primary" aria-hidden />
@@ -542,12 +569,12 @@ export function Manage() {
             onClick={() => setTab(x.id)}
             className={cx(
               'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors',
-              tab === x.id ? 'bg-ink text-bg' : 'text-muted hover:bg-surface-2 hover:text-ink',
+              tab === x.id ? 'bg-primary text-primary-ink shadow-card' : 'text-muted hover:bg-surface-2 hover:text-ink',
             )}
           >
             <x.icon className="size-4" aria-hidden />
             {x.label}
-            {!!x.badge && <span className={cx('rounded-full px-1.5 text-xs', tab === x.id ? 'bg-bg/20' : 'bg-surface-2')}>{x.badge}</span>}
+            {!!x.badge && <span className={cx('rounded-full px-1.5 text-xs', tab === x.id ? 'bg-white/25' : 'bg-surface-2')}>{x.badge}</span>}
           </button>
         ))}
       </div>

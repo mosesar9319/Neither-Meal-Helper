@@ -78,7 +78,7 @@ export function Links() {
           {t.recoverEmailTitle}
         </h2>
         <p className="text-muted">{t.recoverEmailText}</p>
-        {api.mode === 'local' ? (
+        {!api.emailEnabled ? (
           <p className="rounded-2xl bg-warn-soft px-4 py-3 text-sm text-warn">{t.recoverUnavailable}</p>
         ) : sent ? (
           <p className="rounded-2xl bg-accent-soft px-4 py-3 text-accent">{t.recoverSent}</p>

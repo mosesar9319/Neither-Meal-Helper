@@ -6,6 +6,7 @@ import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { computeDays, deliveryWindow } from '../lib/schedule';
 import { LIMITS, type Board, type MealSlot, type PrivateDetails, type PublicSignup } from '../lib/types';
 import type { SignupEdit } from '../lib/api';
+import { isEmail } from '../lib/api/validate';
 import { Button, Field, Spinner, TextArea, TextInput, buttonClass } from './ui';
 
 export function windowFor(board: Board, date: string) {
@@ -108,7 +109,7 @@ export function SignupFields({
 }: {
   value: SignupEdit;
   onChange: (v: SignupEdit) => void;
-  errors: Partial<Record<'name' | 'phone', string>>;
+  errors: Partial<Record<'name' | 'phone' | 'email', string>>;
 }) {
   const { t } = useI18n();
   const id = useId();
@@ -126,8 +127,17 @@ export function SignupFields({
           <TextInput id={`${id}-phone`} type="tel" value={value.phone} maxLength={LIMITS.phone} autoComplete="tel" invalid={!!errors.phone} onChange={(e) => set({ phone: e.target.value })} required />
         </Field>
       </div>
-      <Field id={`${id}-email`} label={t.yourEmail} hint={t.yourEmailHint} optional>
-        <TextInput id={`${id}-email`} type="email" value={value.email} maxLength={LIMITS.email} autoComplete="email" onChange={(e) => set({ email: e.target.value })} />
+      <Field id={`${id}-email`} label={t.yourEmail} hint={t.yourEmailHint} error={errors.email}>
+        <TextInput
+          id={`${id}-email`}
+          type="email"
+          value={value.email}
+          maxLength={LIMITS.email}
+          autoComplete="email"
+          invalid={!!errors.email}
+          onChange={(e) => set({ email: e.target.value })}
+          required
+        />
       </Field>
       <Field id={`${id}-note`} label={t.noteToFamily} optional>
         <TextArea id={`${id}-note`} rows={2} value={value.note} maxLength={LIMITS.note} onChange={(e) => set({ note: e.target.value })} />
@@ -139,11 +149,13 @@ export function SignupFields({
 export function useSignupForm(initial: SignupEdit) {
   const { t } = useI18n();
   const [value, setValue] = useState<SignupEdit>(initial);
-  const [errors, setErrors] = useState<Partial<Record<'name' | 'phone', string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<'name' | 'phone' | 'email', string>>>({});
   const validate = () => {
     const e: typeof errors = {};
     if (!value.name.trim()) e.name = t.required;
     if (!value.phone.trim()) e.phone = t.required;
+    if (!value.email.trim()) e.email = t.required;
+    else if (!isEmail(value.email)) e.email = t.invalidEmail;
     setErrors(e);
     return Object.keys(e).length === 0;
   };

@@ -5,7 +5,6 @@ import {
   ArrowRight,
   CalendarHeart,
   ChevronDown,
-  HeartHandshake,
   Link2,
   ListChecks,
   Lock,
@@ -18,6 +17,7 @@ import { BoardProgress, BoardSummary } from '../components/BoardView';
 import { useTitle } from '../components/Layout';
 import { Badge, Card, LinkButton, buttonClass } from '../components/ui';
 import { addDays, formatDate, parseISO, todayISO } from '../lib/dates';
+import { api } from '../lib/api';
 import { device } from '../lib/device';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { buildBoardDays } from '../lib/schedule';
@@ -29,6 +29,8 @@ function useDemoBoard() {
     const start = todayISO();
     const board: Board = {
       slug: 'demo',
+      status: 'approved',
+      reviewNote: '',
       familyName: lang === 'he' ? 'לוי' : 'Levi',
       startDate: start,
       endDate: addDays(start, 6),
@@ -60,6 +62,24 @@ function useDemoBoard() {
     board.blockedDates = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(start, n)).filter((d) => parseISO(d).getDay() === 6);
     return { board, days: buildBoardDays(board, signups.filter((s) => !board.blockedDates.includes(s.date)), start) };
   }, [lang]);
+}
+
+/** A steaming pot whose steam rises into a heart. */
+function WarmPot({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 160 120" className={className} aria-hidden>
+      <ellipse cx="80" cy="108" rx="62" ry="8" fill="var(--peach-soft)" />
+      <path d="M58 44c-6-8 6-12 0-20M80 40c-6-8 6-12 0-20" stroke="var(--peach)" strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.8" />
+      <path d="M102 30c-4.5-6-14-2-11 6 2 5 11 10 11 10s9-5 11-10c3-8-6.5-12-11-6z" fill="var(--peach)" />
+      <rect x="34" y="54" width="92" height="8" rx="4" fill="var(--primary)" />
+      <rect x="72" y="47" width="16" height="8" rx="4" fill="var(--primary)" />
+      <path d="M40 62h80v14a26 26 0 0 1-26 26H66a26 26 0 0 1-26-26z" fill="#c9a3d8" />
+      <path d="M40 66h-8a6 6 0 0 0 0 12h9M120 66h8a6 6 0 0 1 0 12h-9" stroke="#c9a3d8" strokeWidth="5" strokeLinecap="round" fill="none" />
+      <path d="M54 80c8 4 18 4 26 0s18-4 26 0" stroke="#fff" strokeOpacity="0.55" strokeWidth="3" strokeLinecap="round" fill="none" />
+      <path d="M128 100c4-10 12-14 20-14-2 8-8 14-20 14z" fill="var(--accent)" opacity="0.55" />
+      <path d="M30 102c-3-8-10-12-17-12 2 7 7 12 17 12z" fill="var(--accent)" opacity="0.45" />
+    </svg>
+  );
 }
 
 function Preview() {
@@ -117,7 +137,6 @@ export function Home() {
     { icon: CalendarHeart, title: t.how3Title, text: t.how3 },
   ];
   const features = [
-    { icon: CalendarHeart, title: t.f1Title, text: t.f1 },
     { icon: ListChecks, title: t.f2Title, text: t.f2 },
     { icon: Repeat2, title: t.f3Title, text: t.f3 },
     { icon: Lock, title: t.f4Title, text: t.f4 },
@@ -125,24 +144,24 @@ export function Home() {
     { icon: UsersRound, title: t.f6Title, text: t.f6 },
   ];
   const faqs = [
-    [t.q1, t.a1],
+    [t.q1, api.googleEnabled ? `${t.a1} ${t.a1Google}` : t.a1],
     [t.q2, t.a2],
     [t.q3, t.a3],
+    [t.q5, t.a5],
     [t.q4, t.a4],
   ];
 
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute -top-40 start-1/2 size-[44rem] -translate-x-1/2 rounded-full bg-primary-soft/70 blur-3xl rtl:translate-x-1/2" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-10 pb-16 sm:px-6 sm:pt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-20 lg:pb-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-peach-soft via-bg to-bg">
+        <div aria-hidden className="pointer-events-none absolute -top-32 -start-24 size-[28rem] rounded-full bg-primary-soft blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute top-24 -end-32 size-[24rem] rounded-full bg-peach-soft blur-3xl" />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-8 pb-16 sm:px-6 sm:pt-14 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-20 lg:pb-24">
           <div className="animate-rise">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3.5 py-1 text-sm font-medium text-accent">
-              <HeartHandshake className="size-4" aria-hidden />
-              {t.heroEyebrow}
-            </p>
-            <h1 className="mb-5 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">{t.heroTitle}</h1>
+            <WarmPot className="mb-4 h-24 w-auto sm:h-28" />
+            <h1 className="mb-3 text-4xl font-bold tracking-tight text-ink sm:text-5xl lg:text-6xl">{t.heroTitle}</h1>
+            <p className="mb-4 max-w-xl text-xl leading-snug font-medium text-primary sm:text-2xl">{t.heroSubtitle}</p>
             <p className="mb-8 max-w-xl text-lg text-muted">{t.heroText}</p>
             <div className="flex flex-wrap items-center gap-3">
               <LinkButton to="/new" size="lg">
@@ -154,14 +173,6 @@ export function Home() {
                 <ChevronDown className="size-5" aria-hidden />
               </a>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-              {[t.trust1, t.trust2, t.trust3].map((x) => (
-                <li key={x} className="flex items-center gap-2">
-                  <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-                  {x}
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="animate-rise [animation-delay:80ms]">
             <Preview />
@@ -210,13 +221,13 @@ export function Home() {
       )}
 
       {/* How it works */}
-      <section id="how" className="scroll-mt-20 border-y border-line/70 bg-surface/60">
+      <section id="how" className="scroll-mt-20 bg-peach-soft/60">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <h2 className="mb-10 text-center text-3xl font-bold sm:text-4xl">{t.howTitle}</h2>
           <ol className="grid gap-5 md:grid-cols-3">
             {steps.map((s, i) => (
-              <li key={s.title} className="relative rounded-3xl bg-bg p-6">
-                <span className="absolute end-5 top-4 font-display text-5xl font-extrabold text-primary/15" aria-hidden>
+              <li key={s.title} className="relative rounded-3xl bg-surface p-6 shadow-card">
+                <span className="absolute end-5 top-4 font-display text-5xl font-bold text-peach/40" aria-hidden>
                   {i + 1}
                 </span>
                 <s.icon className="mb-4 size-8 text-primary" aria-hidden />
@@ -232,9 +243,9 @@ export function Home() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <h2 className="mb-10 text-center text-3xl font-bold sm:text-4xl">{t.featuresTitle}</h2>
         <div className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((x) => (
+          {features.map((x, i) => (
             <div key={x.title} className="flex gap-4">
-              <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary">
+              <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${i % 2 ? 'bg-peach-soft text-[#c0613f]' : 'bg-primary-soft text-primary'}`}>
                 <x.icon className="size-5" aria-hidden />
               </span>
               <div>
@@ -264,13 +275,14 @@ export function Home() {
 
       {/* Closing CTA */}
       <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-        <div className="rounded-[2rem] bg-primary px-6 py-12 text-center text-primary-ink sm:py-16">
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-peach-soft via-surface to-primary-soft px-6 py-12 text-center shadow-card sm:py-16">
+          <WarmPot className="mx-auto mb-4 h-20 w-auto" />
           <h2 className="mb-3 text-3xl font-bold sm:text-4xl">{t.ctaTitle}</h2>
-          <p className="mx-auto mb-8 max-w-lg opacity-90">{t.ctaText}</p>
-          <Link to="/new" className="inline-flex h-13 items-center gap-2 rounded-full bg-bg px-7 font-medium text-ink shadow-card hover:opacity-90">
+          <p className="mx-auto mb-8 max-w-lg text-muted">{t.ctaText}</p>
+          <LinkButton to="/new" size="lg">
             {t.startBoard}
             <Arrow className="size-5" aria-hidden />
-          </Link>
+          </LinkButton>
         </div>
       </section>
     </>
