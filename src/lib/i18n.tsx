@@ -13,9 +13,6 @@ const en = {
   heroText: 'Send a request in two minutes. Once the site’s administrators approve it, share the board in the neighborhood WhatsApp group and let neighbors pick a day to cook. No apps and no awkward phone calls.',
   startBoard: 'Request a meal board',
   seeHow: 'See how it works',
-  trust1: 'Free',
-  trust2: 'No accounts',
-  trust3: 'Address stays private',
   previewLabel: 'Example board',
   howTitle: 'How it works',
   how1Title: 'Send a request',
@@ -25,8 +22,6 @@ const en = {
   how3Title: 'Share and pick a day',
   how3: 'Share the link on WhatsApp. Each neighbor chooses a free meal and gets an email reminder the evening before.',
   featuresTitle: 'Thought through for real neighborhoods',
-  f1Title: 'Shabbat and holidays built in',
-  f1: 'Shabbat and Yom Tov close automatically, and Fridays and holiday eves get an earlier drop-off time.',
   f2Title: 'Kashrut and allergies, clearly',
   f2: 'Kashrut level, meat or dairy, and allergies shown up front so no one has to ask.',
   f3Title: 'No repeats',
@@ -305,6 +300,20 @@ const en = {
   removeAdminConfirm: 'Remove {email} as an administrator?',
   adminDeleteConfirm: 'Delete this request and all its sign-ups? This can’t be undone.',
   organizer: 'Organizer',
+
+  // Accounts (optional, Continue with Google)
+  signIn: 'Sign in',
+  continueWithGoogle: 'Continue with Google',
+  or: 'or',
+  myTitle: 'Your requests and meals',
+  mySignedOutText: 'Sign in with Google to see the requests you sent and the meals you signed up for, on any device. It’s optional: everything also works without signing in.',
+  googleUnavailable: 'Signing in isn’t available on this site yet. Your links are saved on this device.',
+  myRequests: 'My requests',
+  myMeals: 'My meals',
+  nothingYet: 'Nothing here yet.',
+  googleHint: 'Optional: continue with Google to fill in your details and see this request on any device.',
+  googleError: 'Google sign-in didn’t work. Try again, or continue without signing in.',
+  a1Google: 'If you like, you can continue with Google to fill in your details and see your requests on any device.',
 } as const;
 
 export type Dict = { [K in keyof typeof en]: string };
@@ -320,9 +329,6 @@ const he: Dict = {
   heroText: 'שולחים בקשה בשתי דקות. אחרי שמנהלי האתר מאשרים אותה, משתפים את הלוח בקבוצת הוואטסאפ של השכונה, והשכנים בוחרים יום לבשל. בלי אפליקציות ובלי טלפונים מביכים.',
   startBoard: 'בקשת לוח ארוחות',
   seeHow: 'איך זה עובד',
-  trust1: 'בחינם',
-  trust2: 'בלי חשבון',
-  trust3: 'הכתובת נשארת פרטית',
   previewLabel: 'לוח לדוגמה',
   howTitle: 'איך זה עובד',
   how1Title: 'שולחים בקשה',
@@ -332,8 +338,6 @@ const he: Dict = {
   how3Title: 'משתפים ובוחרים יום',
   how3: 'משתפים את הקישור בוואטסאפ. כל שכן בוחר ארוחה פנויה ומקבל תזכורת במייל בערב שלפני.',
   featuresTitle: 'חשבנו על כל הפרטים',
-  f1Title: 'שבתות וחגים מובנים',
-  f1: 'שבת ויום טוב נסגרים אוטומטית, ובימי שישי וערבי חג יש שעת מסירה מוקדמת.',
   f2Title: 'כשרות ואלרגיות, ברור',
   f2: 'רמת כשרות, בשרי או חלבי ואלרגיות מופיעים מראש — אף אחד לא צריך לשאול.',
   f3Title: 'בלי כפילויות',
@@ -603,6 +607,19 @@ const he: Dict = {
   removeAdminConfirm: 'להסיר את {email} מרשימת המנהלים?',
   adminDeleteConfirm: 'למחוק את הבקשה ואת כל ההרשמות שלה? אי אפשר לבטל את זה.',
   organizer: 'מארגן/ת',
+
+  signIn: 'כניסה',
+  continueWithGoogle: 'המשך עם Google',
+  or: 'או',
+  myTitle: 'הבקשות והארוחות שלך',
+  mySignedOutText: 'התחברו עם Google כדי לראות את הבקשות ששלחתם ואת הארוחות שנרשמתם אליהן, מכל מכשיר. זה לא חובה: הכול עובד גם בלי להתחבר.',
+  googleUnavailable: 'התחברות עדיין לא זמינה באתר. הקישורים שלכם שמורים במכשיר הזה.',
+  myRequests: 'הבקשות שלי',
+  myMeals: 'הארוחות שלי',
+  nothingYet: 'עדיין אין כאן כלום.',
+  googleHint: 'לא חובה: המשיכו עם Google כדי למלא את הפרטים ולראות את הבקשה מכל מכשיר.',
+  googleError: 'ההתחברות עם Google לא הצליחה. נסו שוב, או המשיכו בלי להתחבר.',
+  a1Google: 'אם תרצו, אפשר להמשיך עם Google כדי למלא פרטים ולראות את הבקשות מכל מכשיר.',
 };
 
 const dicts: Record<Lang, Dict> = { en, he };

@@ -18,6 +18,7 @@ import { BoardProgress, BoardSummary } from '../components/BoardView';
 import { useTitle } from '../components/Layout';
 import { Badge, Card, LinkButton, buttonClass } from '../components/ui';
 import { addDays, formatDate, parseISO, todayISO } from '../lib/dates';
+import { api } from '../lib/api';
 import { device } from '../lib/device';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { buildBoardDays } from '../lib/schedule';
@@ -119,7 +120,6 @@ export function Home() {
     { icon: CalendarHeart, title: t.how3Title, text: t.how3 },
   ];
   const features = [
-    { icon: CalendarHeart, title: t.f1Title, text: t.f1 },
     { icon: ListChecks, title: t.f2Title, text: t.f2 },
     { icon: Repeat2, title: t.f3Title, text: t.f3 },
     { icon: Lock, title: t.f4Title, text: t.f4 },
@@ -127,7 +127,7 @@ export function Home() {
     { icon: UsersRound, title: t.f6Title, text: t.f6 },
   ];
   const faqs = [
-    [t.q1, t.a1],
+    [t.q1, api.googleEnabled ? `${t.a1} ${t.a1Google}` : t.a1],
     [t.q2, t.a2],
     [t.q3, t.a3],
     [t.q5, t.a5],
@@ -157,14 +157,6 @@ export function Home() {
                 <ChevronDown className="size-5" aria-hidden />
               </a>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-              {[t.trust1, t.trust2, t.trust3].map((x) => (
-                <li key={x} className="flex items-center gap-2">
-                  <span className="size-1.5 rounded-full bg-accent" aria-hidden />
-                  {x}
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="animate-rise [animation-delay:80ms]">
             <Preview />

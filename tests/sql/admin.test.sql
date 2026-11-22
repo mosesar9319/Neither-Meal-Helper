@@ -89,12 +89,12 @@ begin
   assert (public.meal_admin_me()->>'isAdmin')::boolean;
 
   -- The admin sees the request with its private details and the organizer's link.
-  list := public.meal_admin_list_requests('pending');
-  assert jsonb_array_length(list) = 1;
-  assert list->0->>'slug' = slug;
-  assert list->0->'private'->>'address' = '1 Elm St';
-  assert list->0->'private'->>'organizerEmail' = 'dana@example.com';
-  assert list->0->>'manageToken' = tok;
+  -- Other test files may have added requests; look at this one.
+  select x into list from jsonb_array_elements(public.meal_admin_list_requests('pending')) x where x->>'slug' = slug;
+  assert list is not null;
+  assert list->'private'->>'address' = '1 Elm St';
+  assert list->'private'->>'organizerEmail' = 'dana@example.com';
+  assert list->>'manageToken' = tok;
   begin
     perform public.meal_admin_list_requests('everything');
     raise exception 'expected invalid';
@@ -120,8 +120,8 @@ begin
   -- Approve: now public, and neighbors can sign up.
   perform public.meal_admin_review(slug, 'approved', '');
   assert public.meal_get_public_board(slug)->'board'->>'status' = 'approved';
-  assert jsonb_array_length(public.meal_admin_list_requests('approved')) = 1;
-  assert jsonb_array_length(public.meal_admin_list_requests('pending')) = 0;
+  assert exists (select 1 from jsonb_array_elements(public.meal_admin_list_requests('approved')) x where x->>'slug' = slug);
+  assert not exists (select 1 from jsonb_array_elements(public.meal_admin_list_requests('pending')) x where x->>'slug' = slug);
 
   -- Sign-ups need a valid email.
   begin

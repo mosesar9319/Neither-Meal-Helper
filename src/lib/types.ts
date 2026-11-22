@@ -129,6 +129,19 @@ export interface AdminRequest extends Board {
   signupCount: number;
 }
 
+/** The signed-in person (Continue with Google). */
+export interface AccountUser {
+  email: string;
+  name: string;
+  avatarUrl: string;
+}
+
+/** What a signed-in person sent and signed up for, across devices. */
+export interface MyActivity {
+  boards: { slug: string; familyName: string; status: BoardStatus; startDate: string; endDate: string; createdAt: string; manageToken: string }[];
+  signups: { date: string; slot: MealSlot; dish: string; editToken: string; familyName: string; slug: string }[];
+}
+
 export interface AdminEntry {
   email: string;
   addedBy: string;

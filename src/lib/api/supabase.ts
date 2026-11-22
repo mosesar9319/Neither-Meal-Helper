@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { ApiError, type Api, type ApiErrorCode } from './types';
 import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
 
@@ -11,11 +11,24 @@ import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate
 
 const KNOWN: ApiErrorCode[] = ['not_found', 'slot_full', 'day_closed', 'invalid', 'forbidden'];
 
-export function createSupabaseApi(url: string, anonKey: string, emailEnabled = false): Api {
-  // Sessions are kept so admins stay signed in; nobody else ever signs in.
+export function createSupabaseApi(url: string, anonKey: string, emailEnabled = false, googleEnabled = false): Api {
+  // Admins, and anyone who chooses Continue with Google, stay signed in.
   const sb: SupabaseClient = createClient(url, anonKey, {
-    auth: { persistSession: true, detectSessionInUrl: true, storageKey: 'nmc.auth' },
+    auth: { persistSession: true, detectSessionInUrl: true, flowType: 'pkce', storageKey: 'nmc.auth' },
   });
+
+  const toUser = (u: User | undefined | null) => {
+    if (!u?.email) return null;
+    const m = (u.user_metadata ?? {}) as Record<string, unknown>;
+    const str = (v: unknown) => (typeof v === 'string' ? v : '');
+    return { email: u.email.toLowerCase(), name: str(m.full_name) || str(m.name), avatarUrl: str(m.avatar_url) || str(m.picture) };
+  };
+
+  async function signInWithGoogle(returnTo: string) {
+    if (!googleEnabled) throw new ApiError('unavailable');
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: returnTo } });
+    if (error) throw new ApiError('unknown', error.message);
+  }
 
   async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
     const { data, error } = await sb.rpc(`meal_${fn}`, args);
@@ -39,6 +52,7 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
   return {
     mode: 'supabase',
     emailEnabled,
+    googleEnabled,
     createBoard: (input) => rpc('create_board', { p: normalizeBoard(input) }),
     getPublicBoard: (slug) => rpc('get_public_board', { p_slug: slug }),
     signUp: (slug, input) => rpc('sign_up', { p_slug: slug, p: normalizeSignup(input) }),
@@ -60,6 +74,26 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
     notifySignup: (editToken) => fireAndForget('meal-notify-signup', { editToken }),
     notifyRequest: (manageToken) => fireAndForget('meal-notify-request', { manageToken }),
     notifyDecision: (slug) => fireAndForget('meal-notify-decision', { slug }),
+
+    account: {
+      async user() {
+        const { data } = await sb.auth.getSession();
+        return toUser(data.session?.user);
+      },
+      onChange(cb) {
+        const { data } = sb.auth.onAuthStateChange(() => cb());
+        return () => data.subscription.unsubscribe();
+      },
+      signInWithGoogle,
+      async signOut() {
+        await sb.auth.signOut();
+      },
+      activity: () => rpc('my_activity'),
+      async linkDeviceItems(manageTokens, editTokens) {
+        if (!manageTokens.length && !editTokens.length) return;
+        await rpc('link_my_items', { p_manage_tokens: manageTokens.slice(0, 50), p_edit_tokens: editTokens.slice(0, 50) });
+      },
+    },
 
     admin: {
       async session() {

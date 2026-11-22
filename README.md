@@ -75,6 +75,13 @@ In Supabase → Authentication → URL Configuration, add the site's `/admin` UR
 the allowed **Redirect URLs**, or sign-in links will send admins to the project's
 default Site URL.
 
+### Google sign-in (optional)
+
+Anyone can choose "Continue with Google" to fill in their details and see their requests
+and meals on any device at `/me`; admins can use it instead of the email link. It's hidden
+until `VITE_GOOGLE_AUTH_ENABLED=true`. Setup steps (Google OAuth client, Supabase provider,
+redirect URLs) are in `HANDOFF.md`.
+
 ### Emails and reminders
 
 Five Edge Functions in `supabase/functions` send email through

@@ -100,6 +100,7 @@ function checkSlot(row: BoardRow, input: Pick<SignupInput, 'date' | 'slot'>, ign
 export const localApi: Api = {
   mode: 'local',
   emailEnabled: false,
+  googleEnabled: false,
 
   async createBoard(input) {
     const db = load();
@@ -256,6 +257,24 @@ export const localApi: Api = {
   },
   async notifyDecision() {
     /* no email in demo mode */
+  },
+
+  // Demo mode has no Google sign-in; links saved on the device still work.
+  account: {
+    async user() {
+      return null;
+    },
+    onChange() {
+      return () => {};
+    },
+    async signInWithGoogle() {
+      throw new ApiError('unavailable');
+    },
+    async signOut() {},
+    async activity() {
+      return { boards: [], signups: [] };
+    },
+    async linkDeviceItems() {},
   },
 
   admin: {

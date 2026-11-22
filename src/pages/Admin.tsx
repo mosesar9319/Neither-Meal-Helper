@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Check, ExternalLink, Info, LogOut, Mail, Phone, ShieldCheck, Trash2, Undo2, UserPlus, X } from 'lucide-react';
 import { BoardSummary } from '../components/BoardView';
+import { GoogleButton, OrDivider } from '../components/GoogleButton';
 import { LoadingState, Page, useTitle } from '../components/Layout';
 import { Badge, Button, Card, Dialog, Field, Spinner, TextArea, TextInput, buttonClass, cx, useConfirm, useToast } from '../components/ui';
 import { ApiError, api } from '../lib/api';
@@ -27,6 +28,12 @@ function SignIn() {
         <ShieldCheck className="size-10 text-primary" aria-hidden />
         <h1 className="text-3xl font-bold">{t.adminSignInTitle}</h1>
         <p className="text-muted">{t.adminSignInText}</p>
+        {!sent && (
+          <>
+            <GoogleButton returnPath="/admin" />
+            <OrDivider />
+          </>
+        )}
         {sent ? (
           <p role="status" className="rounded-2xl bg-accent-soft px-4 py-3 text-accent">
             {t.linkSent}

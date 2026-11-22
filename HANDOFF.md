@@ -20,11 +20,12 @@ It rebuilds an earlier Lovable app (`neighborly-meal-circle.lovable.app`) with a
 | Area | State |
 | --- | --- |
 | Site | Live on Netlify (`neighborly-meal-circle`), deploys from this branch. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (publishable), `VITE_EMAIL_ENABLED=true` |
-| Database | Live; migrations `meal_boards_init`, `meal_approval_admins`, `meal_reminder_schedule`, `meal_organizer_email_lookup` |
+| Database | Live; migrations `meal_boards_init`, `meal_approval_admins`, `meal_reminder_schedule`, `meal_organizer_email_lookup`, `meal_accounts` |
 | Email | Resend, sending domain `meals.dafsync.com` (verified; DNS at Spaceship, subdomain records only). Function secrets `MEAL_RESEND_API_KEY`, `MEAL_EMAIL_FROM`, `MEAL_SITE_URL` are set |
 | Email functions | 5 deployed (v3, 2026-11-22): claim-before-send + Resend `Idempotency-Key` |
 | Reminders | pg_cron daily 16:07 UTC (18:07 Israel winter). Dry run on 2026-11-22 found the TEST sign-up for Nov 23 |
 | Admins | 2 emails in `meal_admins`; one has signed in successfully |
+| Google sign-in | **Built, switched off.** Optional for everyone (fills in details, "my requests and meals" at `/me` on any device); admins get it next to the email link. Turns on with `VITE_GOOGLE_AUTH_ENABLED=true` after the setup below |
 | Supabase Auth | SMTP via Resend (`smtp.resend.com:465`), 30 emails/hour, redirect URL `<site>/admin` added. Site URL left as the other app's. **New sign-ups ON** (shared setting, see below) |
 
 GrokBot's end-to-end test on 2026-11-22 passed: admin notification, admin sign-in (email landed in spam),
@@ -39,11 +40,23 @@ approval email, sign-up thank-you and organizer notice. **Pending: the reminder 
    to `meals.dafsync.com`, set it as `MEAL_RESEND_API_KEY` and as the Auth SMTP password, then delete the old key.
 3. **Apply the Auth email templates** in `supabase/templates/` (Supabase → Authentication → Emails → Magic link and
    Confirm signup). They are neutral on purpose; see the shared-Auth note below.
-4. **Consider turning new sign-ups back off.** It was turned on because the admin's first magic link was refused
-   (422 "Signups not allowed"). With it on, anyone can create an Auth account in the shared project and make it send
-   confirmation emails from `meals.dafsync.com`. Accounts gain no data access in either app, but it costs email
-   reputation and quota. Safer: keep it off and create each new admin's Auth user from the dashboard
-   (Authentication → Users → Add user, email only) when adding them to `meal_admins`. The second admin has no Auth user yet.
+4. **Set up Google sign-in** (owner asked for it; code is live but hidden):
+   1. Google Cloud console → APIs & Services → OAuth consent screen: External; app name "שכנות למען שכנות";
+      support email; scopes `email`, `profile`, `openid` only; then **Publish app** (in "Testing" only listed test
+      users can sign in). No logo, so no verification is needed.
+   2. Credentials → Create OAuth client ID → Web application. Authorized JavaScript origin
+      `https://neighborly-meal-circle.netlify.app`; authorized redirect URI
+      `https://vipbambqmpjftdzouwsi.supabase.co/auth/v1/callback`.
+   3. Supabase → Authentication → Sign In / Providers → Google: enable, paste the client ID and secret.
+   4. Supabase → Authentication → URL Configuration → Redirect URLs: add
+      `https://neighborly-meal-circle.netlify.app/**` (people return to the page they were on).
+   5. Netlify → Site configuration → Environment variables: `VITE_GOOGLE_AUTH_ENABLED=true`, then
+      Deploys → Trigger deploy (Vite reads the variable at build time).
+   6. Test: Continue with Google from `/me`, send a request, confirm it appears on `/me`; sign in at `/admin` with
+      an admin's Google account.
+   Keep **"Allow new users to sign up" ON**: first-time Google sign-ins need it. Because that also lets anyone create
+   email accounts that send confirmation mail from `meals.dafsync.com`, consider turning on Supabase Auth's CAPTCHA
+   protection (Authentication → Attack Protection) and adding the widget, or watch the Resend logs.
 5. **Decide on a dedicated Supabase project** (see "Shared project"). Recommended before real use grows.
 
 ## Shared Supabase project (read before touching the database)
@@ -75,8 +88,11 @@ approval email, sign-up thank-you and organizer notice. **Pending: the reminder 
 
 ## Architecture
 
-1. **No accounts for organizers or neighbors; capability links.** Public slug `/b/:slug`; neighbor's own sign-up
-   `/s/:token`; organizer `/m/:token`. Tokens are 18 random bytes, base64url.
+1. **Capability links, accounts optional.** Public slug `/b/:slug`; neighbor's own sign-up `/s/:token`; organizer
+   `/m/:token`. Tokens are 18 random bytes, base64url. Signing in with Google is optional: when signed in,
+   `meal_create_board` / `meal_sign_up` record `created_by` / `user_id` (= `auth.uid()`), `meal_my_activity()` lists
+   them on `/me`, and `meal_link_my_items()` links items whose links are saved on the device (only unclaimed ones,
+   and only with the owner/edit token). Both are callable by `authenticated` only.
 2. **Tables are closed to the browser.** RLS on, no policies, no grants to `anon`/`authenticated`. The browser calls
    only `SECURITY DEFINER` functions `public.meal_*`, which check the slug, token, or (for `meal_admin_*`) that the
    signed-in user's **confirmed** email is in `meal_admins`. Supabase grants new public functions to `anon` by
@@ -124,9 +140,14 @@ select net.http_post(
 ## Routes
 
 `/` home · `/new` request wizard · `/b/:slug` board · `/s/:token` my sign-up · `/m/:token` organizer ·
-`/admin` admin sign-in and review · `/links` find your links.
+`/admin` admin sign-in and review · `/me` my requests and meals (Google) · `/links` find your links.
 
 ## Verified on 2026-11-22
+
+- Google sign-in: SQL tests (`tests/sql/accounts.test.sql`) cover linking, isolation between accounts, and
+  visitors being refused. In the browser, with the setting off no Google UI appears; with it on the buttons appear
+  (header, `/me`, `/admin`, wizard, sign-up form) and hand off to Supabase's Google authorize URL with the right
+  return page. **Not tested:** a real Google sign-in (needs the OAuth client).
 
 - After porting PR #1: `npx vitest run` 22 tests pass (adds DST, idempotency-key, email-format and branding tests);
   SQL suites pass including the exact organizer lookup; `deno check` passes for all five functions. Live: the
@@ -148,7 +169,7 @@ select net.http_post(
 
 1. No abuse protection: anyone can send many requests or sign-ups. Consider rate limiting or a captcha.
 2. Migration history: applied via the Supabase MCP tool as `meal_boards_init`, `meal_approval_admins`,
-   `meal_reminder_schedule`, `meal_organizer_email_lookup`, so remote versions differ from the local file names.
+   `meal_reminder_schedule`, `meal_organizer_email_lookup`, `meal_accounts`, so remote versions differ from the local file names.
    Run `supabase migration repair` before any `supabase db push`.
 3. Admin sign-in emails land in spam: brand-new sending domain plus the default template. The templates in
    `supabase/templates/` should help; moving DMARC from `p=none` to `p=quarantine` after a few weeks of clean sending also helps.

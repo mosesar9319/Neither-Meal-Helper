@@ -1,8 +1,10 @@
 import type {
+  AccountUser,
   AdminEntry,
   AdminRequest,
   BoardInput,
   BoardStatus,
+  MyActivity,
   ManageData,
   MySignupData,
   PublicBoardData,
@@ -32,6 +34,18 @@ export class ApiError extends Error {
 
 export type SignupEdit = Pick<SignupInput, 'name' | 'phone' | 'email' | 'dish' | 'note'>;
 
+/** Optional sign-in for anyone (Continue with Google). */
+export interface AccountApi {
+  user(): Promise<AccountUser | null>;
+  onChange(cb: () => void): () => void;
+  /** Leaves the page for Google and comes back to `returnTo`. */
+  signInWithGoogle(returnTo: string): Promise<void>;
+  signOut(): Promise<void>;
+  activity(): Promise<MyActivity>;
+  /** Links requests and meals whose links are saved on this device to the account. */
+  linkDeviceItems(manageTokens: string[], editTokens: string[]): Promise<void>;
+}
+
 export interface AdminApi {
   /** Email of the signed-in user, or null. */
   session(): Promise<string | null>;
@@ -53,6 +67,8 @@ export interface Api {
   mode: 'local' | 'supabase';
   /** True when the email Edge Functions are deployed (VITE_EMAIL_ENABLED=true). */
   emailEnabled: boolean;
+  /** True when Google sign-in is configured (VITE_GOOGLE_AUTH_ENABLED=true). */
+  googleEnabled: boolean;
   createBoard(input: BoardInput): Promise<{ slug: string; manageToken: string }>;
   getPublicBoard(slug: string): Promise<PublicBoardData>;
   signUp(slug: string, input: SignupInput): Promise<SignUpResult>;
@@ -75,4 +91,5 @@ export interface Api {
   /** Fire-and-forget email to the organizer about an admin's decision (Supabase only). */
   notifyDecision(slug: string): Promise<void>;
   admin: AdminApi;
+  account: AccountApi;
 }
