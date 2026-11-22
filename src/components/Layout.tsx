@@ -6,6 +6,17 @@ import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
 import { LinkButton, Spinner } from './ui';
 
+/** Bilingual label, the same in both interface languages. */
+export function PrivacyLink({ className = 'underline-offset-4 hover:underline' }: { className?: string }) {
+  const { t } = useI18n();
+  return (
+    <Link to="/privacy" className={className}>
+      <span lang="he">{t.privacyLinkHe}</span>
+      <span lang="en"> / {t.privacyLinkEn}</span>
+    </Link>
+  );
+}
+
 export function Logo({ className = 'size-9' }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
@@ -84,13 +95,14 @@ export function Layout() {
           <span className="flex items-center gap-2">
             <Logo className="size-5" /> {t.footer}
           </span>
-          <span className="flex items-center gap-4">
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link to="/links" className="underline-offset-4 hover:underline">
               {t.findLinks}
             </Link>
             <Link to="/admin" className="underline-offset-4 hover:underline">
               {t.adminLink}
             </Link>
+            <PrivacyLink />
           </span>
         </div>
       </footer>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { LogOut, UserRound } from 'lucide-react';
 import { GoogleButton } from '../components/GoogleButton';
-import { LoadingState, Page, useTitle } from '../components/Layout';
+import { LoadingState, Page, PrivacyLink, useTitle } from '../components/Layout';
 import { Badge, Button, Card, buttonClass } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
@@ -35,10 +35,11 @@ export function MyAccount() {
           <h1 className="text-3xl font-bold">{t.myTitle}</h1>
           <p className="text-muted">{api.googleEnabled ? t.mySignedOutText : t.googleUnavailable}</p>
           <GoogleButton returnPath="/me" />
-          <p className="text-sm text-muted">
-            <Link to="/links" className="underline underline-offset-4">
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+            <Link to="/links" className="underline-offset-4 hover:underline">
               {t.findLinks}
             </Link>
+            <PrivacyLink />
           </p>
         </Card>
       </Page>
