@@ -14,7 +14,7 @@ const input = (): BoardInput => ({
   details: { ...defaultDetails(), skipShabbat: false, skipHolidays: false, manualBlocked: [addDays(start, 2)] },
   private: { address: '12 Oak St', instructions: '', phone: '050', organizerEmail: 'org@example.com' },
 });
-const contact = { name: 'Rivka Levi', phone: '052', email: '', dish: 'Soup', note: '' };
+const contact = { name: 'Rivka Levi', phone: '052', email: 'rivka@example.com', dish: 'Soup', note: '' };
 
 async function code(p: Promise<unknown>) {
   try {
@@ -30,6 +30,18 @@ describe('local demo API', () => {
 
   it('runs the whole board lifecycle with the same rules as the database', async () => {
     const { slug, manageToken } = await localApi.createBoard(input());
+
+    // New requests wait for an admin and stay hidden until approved.
+    expect((await localApi.getManage(manageToken)).board.status).toBe('pending');
+    expect(await code(localApi.getPublicBoard(slug))).toBe('not_found');
+    expect(await code(localApi.signUp(slug, { ...contact, date: start, slot: 'dinner' }))).toBe('not_found');
+    expect((await localApi.admin.listRequests('pending')).map((r) => r.slug)).toEqual([slug]);
+    await localApi.admin.review(slug, 'declined', 'Missing address');
+    expect((await localApi.getManage(manageToken)).board.reviewNote).toBe('Missing address');
+    await localApi.updateBoard(manageToken, input()); // editing a declined request resubmits it
+    expect((await localApi.getManage(manageToken)).board.status).toBe('pending');
+    await localApi.admin.review(slug, 'approved', '');
+
     const pub = await localApi.getPublicBoard(slug);
     expect(pub.board.familyName).toBe('Cohen');
     expect(pub.board.slots).toEqual(['lunch', 'dinner']);
@@ -44,6 +56,8 @@ describe('local demo API', () => {
     expect(await code(localApi.signUp(slug, { ...contact, date: addDays(start, 2), slot: 'lunch' }))).toBe('day_closed');
     expect(await code(localApi.signUp(slug, { ...contact, date: start, slot: 'breakfast' }))).toBe('day_closed');
     expect(await code(localApi.signUp(slug, { ...contact, phone: ' ', date: start, slot: 'lunch' }))).toBe('invalid');
+    expect(await code(localApi.signUp(slug, { ...contact, email: '', date: start, slot: 'lunch' }))).toBe('invalid');
+    expect(await code(localApi.signUp(slug, { ...contact, email: 'nope', date: start, slot: 'lunch' }))).toBe('invalid');
 
     const after = await localApi.getPublicBoard(slug);
     expect(after.signups[0].name).toBe('Rivka');

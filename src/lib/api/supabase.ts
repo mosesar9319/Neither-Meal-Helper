@@ -3,23 +3,37 @@ import { ApiError, type Api, type ApiErrorCode } from './types';
 import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
 
 /**
- * Talks to the database only through the SQL functions in
- * supabase/migrations (all named meal_*). Tables are closed to the browser; each function checks
- * the slug or secret token it is given.
+ * Talks to the database only through the SQL functions in supabase/migrations
+ * (all named meal_*). Tables are closed to the browser; each function checks the
+ * slug or secret token it is given, and the meal_admin_* functions check that
+ * the signed-in user is a listed admin.
  */
 
 const KNOWN: ApiErrorCode[] = ['not_found', 'slot_full', 'day_closed', 'invalid', 'forbidden'];
 
 export function createSupabaseApi(url: string, anonKey: string, emailEnabled = false): Api {
-  const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: false } });
+  // Sessions are kept so admins stay signed in; nobody else ever signs in.
+  const sb: SupabaseClient = createClient(url, anonKey, {
+    auth: { persistSession: true, detectSessionInUrl: true, storageKey: 'nmc.auth' },
+  });
 
-  async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  async function rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
     const { data, error } = await sb.rpc(`meal_${fn}`, args);
     if (error) {
       const code = KNOWN.find((k) => error.message?.includes(k));
       throw new ApiError(code ?? 'unknown', error.message);
     }
     return data as T;
+  }
+
+  /** Email functions are a bonus: never block the main action on them. */
+  async function fireAndForget(fn: string, body: Record<string, unknown>) {
+    if (!emailEnabled) return;
+    try {
+      await sb.functions.invoke(fn, { body });
+    } catch {
+      /* ignore */
+    }
   }
 
   return {
@@ -40,16 +54,40 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
     markSeen: (token) => rpc('mark_seen', { p_token: token }),
     async recoverLinks(email) {
       if (!emailEnabled) throw new ApiError('unavailable');
-      const { error } = await sb.functions.invoke('recover-links', { body: { email } });
+      const { error } = await sb.functions.invoke('meal-recover-links', { body: { email } });
       if (error) throw new ApiError('unknown', error.message);
     },
-    async notifySignup(editToken) {
-      if (!emailEnabled) return;
-      try {
-        await sb.functions.invoke('notify-signup', { body: { editToken } });
-      } catch {
-        /* email is a bonus; never block the sign-up on it */
-      }
+    notifySignup: (editToken) => fireAndForget('meal-notify-signup', { editToken }),
+    notifyRequest: (manageToken) => fireAndForget('meal-notify-request', { manageToken }),
+    notifyDecision: (slug) => fireAndForget('meal-notify-decision', { slug }),
+
+    admin: {
+      async session() {
+        const { data } = await sb.auth.getSession();
+        return data.session?.user.email ?? null;
+      },
+      onChange(cb) {
+        const { data } = sb.auth.onAuthStateChange(() => cb());
+        return () => data.subscription.unsubscribe();
+      },
+      async requestLink(email, redirectTo) {
+        const clean = email.trim().toLowerCase();
+        // Only listed admins get a link, so random visitors can't create accounts here.
+        const allowed = await rpc<boolean>('admin_login_allowed', { p_email: clean });
+        if (!allowed) return;
+        const { error } = await sb.auth.signInWithOtp({ email: clean, options: { emailRedirectTo: redirectTo, shouldCreateUser: true } });
+        if (error) throw new ApiError('unknown', error.message);
+      },
+      async signOut() {
+        await sb.auth.signOut();
+      },
+      me: () => rpc('admin_me'),
+      listRequests: (status) => rpc('admin_list_requests', { p_status: status }),
+      review: (slug, status, note) => rpc('admin_review', { p_slug: slug, p_status: status, p_note: note }),
+      deleteBoard: (slug) => rpc('admin_delete_board', { p_slug: slug }),
+      listAdmins: () => rpc('admin_list_admins'),
+      addAdmin: (email) => rpc('admin_add', { p_email: email }),
+      removeAdmin: (email) => rpc('admin_remove', { p_email: email }),
     },
   };
 }

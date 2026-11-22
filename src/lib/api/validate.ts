@@ -63,6 +63,8 @@ export function normalizeBoard(input: BoardInput): BoardInput & { blockedDates: 
   return { ...clean, blockedDates: computeBlockedDates(clean) };
 }
 
+export const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
+
 export function normalizeSignupEdit(e: SignupEdit): SignupEdit {
   const out = {
     name: clip(e.name, LIMITS.name),
@@ -71,7 +73,8 @@ export function normalizeSignupEdit(e: SignupEdit): SignupEdit {
     dish: clip(e.dish, LIMITS.dish),
     note: clip(e.note, LIMITS.note),
   };
-  if (!out.name || !out.phone) throw new ApiError('invalid', 'contact');
+  if (!out.name || !out.phone || !isEmail(out.email)) throw new ApiError('invalid', 'contact');
+  out.email = out.email.toLowerCase();
   return out;
 }
 

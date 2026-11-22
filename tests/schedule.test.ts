@@ -76,6 +76,8 @@ describe('progress', () => {
   it('counts capacity on open days only', () => {
     const board: Board = {
       slug: 'x',
+      status: 'approved',
+      reviewNote: '',
       familyName: 'X',
       startDate: '2026-11-15', // Sunday
       endDate: '2026-11-21', // Shabbat

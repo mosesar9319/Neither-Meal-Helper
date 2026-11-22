@@ -1,5 +1,5 @@
 import { todayISO } from '../dates';
-import type { Board, Manager, OrganizerPrivate, Signup, SignupInput } from '../types';
+import type { AdminEntry, AdminRequest, Board, Manager, OrganizerPrivate, Signup, SignupInput } from '../types';
 import { ApiError, type Api, type SignupEdit } from './types';
 import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
 
@@ -20,10 +20,17 @@ interface BoardRow {
   private: OrganizerPrivate;
   managers: ManagerRow[];
   signups: SignupRow[];
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string;
 }
 interface Db {
   boards: BoardRow[];
+  admins?: AdminEntry[];
 }
+
+/** In demo mode the visitor is treated as a signed-in admin, so the approval flow can be tried. */
+const DEMO_ADMIN = 'demo-admin@example.com';
 
 const KEY = 'nmc.demoDb';
 let memory: Db = { boards: [] };
@@ -100,8 +107,13 @@ export const localApi: Api = {
     const slug = randomSlug();
     const manageToken = randomToken();
     db.boards.push({
+      createdAt: now(),
+      reviewedAt: null,
+      reviewedBy: '',
       board: {
         slug,
+        status: 'pending',
+        reviewNote: '',
         familyName: clean.familyName,
         startDate: clean.startDate,
         endDate: clean.endDate,
@@ -119,7 +131,7 @@ export const localApi: Api = {
   },
 
   async getPublicBoard(slug) {
-    const row = load().boards.find((r) => r.board.slug === slug);
+    const row = load().boards.find((r) => r.board.slug === slug && r.board.status === 'approved');
     if (!row) throw new ApiError('not_found');
     return {
       board: row.board,
@@ -130,7 +142,7 @@ export const localApi: Api = {
 
   async signUp(slug, input) {
     const db = load();
-    const row = db.boards.find((r) => r.board.slug === slug);
+    const row = db.boards.find((r) => r.board.slug === slug && r.board.status === 'approved');
     if (!row) throw new ApiError('not_found');
     const clean = normalizeSignup(input);
     checkSlot(row, clean);
@@ -177,6 +189,9 @@ export const localApi: Api = {
     const clean = normalizeBoard(input);
     row.board = {
       slug: row.board.slug,
+      // Editing a declined request sends it back for review.
+      status: row.board.status === 'declined' ? 'pending' : row.board.status,
+      reviewNote: row.board.reviewNote,
       familyName: clean.familyName,
       startDate: clean.startDate,
       endDate: clean.endDate,
@@ -235,6 +250,83 @@ export const localApi: Api = {
 
   async notifySignup() {
     /* no email in demo mode */
+  },
+  async notifyRequest() {
+    /* no email in demo mode */
+  },
+  async notifyDecision() {
+    /* no email in demo mode */
+  },
+
+  admin: {
+    async session() {
+      return DEMO_ADMIN;
+    },
+    onChange() {
+      return () => {};
+    },
+    async requestLink() {
+      /* already signed in */
+    },
+    async signOut() {
+      /* demo admin can't sign out */
+    },
+    async me() {
+      return { email: DEMO_ADMIN, isAdmin: true };
+    },
+    async listRequests(status) {
+      return load()
+        .boards.filter((r) => r.board.status === status)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map(
+          (r): AdminRequest => ({
+            ...r.board,
+            createdAt: r.createdAt,
+            reviewedAt: r.reviewedAt,
+            reviewedBy: r.reviewedBy,
+            private: r.private,
+            manageToken: r.managers.find((m) => m.role === 'owner')?.token ?? '',
+            signupCount: r.signups.length,
+          }),
+        );
+    },
+    async review(slug, status, note) {
+      const db = load();
+      const row = db.boards.find((r) => r.board.slug === slug);
+      if (!row) throw new ApiError('not_found');
+      row.board.status = status;
+      row.board.reviewNote = note.trim().slice(0, 500);
+      row.reviewedAt = now();
+      row.reviewedBy = DEMO_ADMIN;
+      save(db);
+    },
+    async deleteBoard(slug) {
+      const db = load();
+      const before = db.boards.length;
+      db.boards = db.boards.filter((r) => r.board.slug !== slug);
+      if (db.boards.length === before) throw new ApiError('not_found');
+      save(db);
+    },
+    async listAdmins() {
+      const db = load();
+      return db.admins?.length ? db.admins : [{ email: DEMO_ADMIN, addedBy: '', createdAt: now() }];
+    },
+    async addAdmin(email) {
+      const db = load();
+      const clean = email.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) throw new ApiError('invalid');
+      const list = db.admins?.length ? db.admins : [{ email: DEMO_ADMIN, addedBy: '', createdAt: now() }];
+      if (!list.some((a) => a.email === clean)) list.push({ email: clean, addedBy: DEMO_ADMIN, createdAt: now() });
+      db.admins = list;
+      save(db);
+    },
+    async removeAdmin(email) {
+      const db = load();
+      const clean = email.trim().toLowerCase();
+      if (clean === DEMO_ADMIN) throw new ApiError('forbidden');
+      db.admins = (db.admins ?? []).filter((a) => a.email !== clean);
+      save(db);
+    },
   },
 };
 

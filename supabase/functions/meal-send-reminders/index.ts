@@ -1,5 +1,5 @@
 // Daily job: emails every neighbor who is cooking tomorrow (Israel time).
-// Run it on a schedule with the header `Authorization: Bearer <CRON_SECRET>`.
+// Run it on a schedule with the header `Authorization: Bearer <MEAL_CRON_SECRET>`.
 import { SITE_URL, admin, button, cors, dateLabel, deliveryWindow, esc, json, layout, sendEmail, slotLabel } from '../_shared/common.ts';
 
 function tomorrowInIsrael(): string {
@@ -11,7 +11,7 @@ function tomorrowInIsrael(): string {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  const secret = Deno.env.get('CRON_SECRET');
+  const secret = Deno.env.get('MEAL_CRON_SECRET');
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
 
   const db = admin();

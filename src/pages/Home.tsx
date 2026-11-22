@@ -29,6 +29,8 @@ function useDemoBoard() {
     const start = todayISO();
     const board: Board = {
       slug: 'demo',
+      status: 'approved',
+      reviewNote: '',
       familyName: lang === 'he' ? 'לוי' : 'Levi',
       startDate: start,
       endDate: addDays(start, 6),
@@ -128,6 +130,7 @@ export function Home() {
     [t.q1, t.a1],
     [t.q2, t.a2],
     [t.q3, t.a3],
+    [t.q5, t.a5],
     [t.q4, t.a4],
   ];
 

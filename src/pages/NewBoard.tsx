@@ -73,6 +73,7 @@ export function NewBoard() {
     try {
       const { slug, manageToken } = await api.createBoard(value);
       device.rememberBoard({ slug, familyName: value.familyName.trim(), manageToken });
+      void api.notifyRequest(manageToken);
       navigate(`/m/${manageToken}?new=1`);
     } catch {
       toast(t.error, 'error');
@@ -135,7 +136,7 @@ export function NewBoard() {
                     {formatRange(value.startDate, value.endDate, lang)} · {open} {t.days} · {value.slots.map((s) => SLOT_LABELS[lang][s]).join(', ')}
                     {value.perSlot > 1 && ` × ${value.perSlot}`}
                   </p>
-                  <BoardSummary board={{ slug: '', ...value, blockedDates: [] }} />
+                  <BoardSummary board={{ slug: '', status: 'pending', reviewNote: '', ...value, blockedDates: [] }} />
                 </section>
               </div>
             )}

@@ -53,9 +53,14 @@ export function Layout() {
           <span className="flex items-center gap-2">
             <Logo className="size-5" /> {t.footer}
           </span>
-          <Link to="/links" className="underline-offset-4 hover:underline">
-            {t.findLinks}
-          </Link>
+          <span className="flex items-center gap-4">
+            <Link to="/links" className="underline-offset-4 hover:underline">
+              {t.findLinks}
+            </Link>
+            <Link to="/admin" className="underline-offset-4 hover:underline">
+              {t.adminLink}
+            </Link>
+          </span>
         </div>
       </footer>
       <ScrollRestoration />

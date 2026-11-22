@@ -19,11 +19,12 @@ export function admin() {
   });
 }
 
-export const SITE_URL = (Deno.env.get('SITE_URL') ?? '').replace(/\/$/, '');
+// Secrets are prefixed MEAL_ because this Supabase project is shared with another app.
+export const SITE_URL = (Deno.env.get('MEAL_SITE_URL') ?? '').replace(/\/$/, '');
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  const key = Deno.env.get('RESEND_API_KEY');
-  const from = Deno.env.get('EMAIL_FROM');
+  const key = Deno.env.get('MEAL_RESEND_API_KEY');
+  const from = Deno.env.get('MEAL_EMAIL_FROM');
   if (!key || !from || !to) return false;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -72,10 +73,10 @@ export function deliveryWindow(iso: string, details: WindowDetails) {
 }
 
 export function layout(body: string) {
-  return `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#2A2420;max-width:560px;margin:auto">${body}
-<p style="color:#6E6359;font-size:13px;margin-top:32px">שכנים למען שכנים · Neighbors for Neighbors</p></div>`;
+  return `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#2A2238;max-width:560px;margin:auto">${body}
+<p style="color:#6D6480;font-size:13px;margin-top:32px">שכנות למען שכנות · Neighbors for Neighbors</p></div>`;
 }
 
 export function button(href: string, label: string) {
-  return `<p><a href="${esc(href)}" style="display:inline-block;background:#B5532F;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none">${esc(label)}</a></p>`;
+  return `<p><a href="${esc(href)}" style="display:inline-block;background:#7B4FB8;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none">${esc(label)}</a></p>`;
 }

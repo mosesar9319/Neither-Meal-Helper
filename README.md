@@ -1,4 +1,4 @@
-# Neighbors for Neighbors · שכנים למען שכנים
+# Neighbors for Neighbors · שכנות למען שכנות
 
 Organize warm meals for a family in your neighborhood after a birth, during
 illness, or in hard times. An organizer opens a meal board, shares the link in

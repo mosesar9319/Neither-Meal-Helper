@@ -27,12 +27,13 @@ declare
     'blockedDates', jsonb_build_array(start + 2),
     'details', '{"organizerName":"Dana","adults":2}'::jsonb,
     'private', '{"address":"12 Oak St","instructions":"Ring twice","phone":"050-1234567","organizerEmail":"dana@example.com"}'::jsonb);
-  contact jsonb := '{"name":"Rivka Levi","phone":"052-0000000","email":"","dish":"Soup","note":""}'::jsonb;
+  contact jsonb := '{"name":"Rivka Levi","phone":"052-0000000","email":"rivka@example.com","dish":"Soup","note":""}'::jsonb;
 begin
   r := public.meal_create_board(board);
   slug := r->>'slug'; tok := r->>'manageToken';
   assert length(slug) = 12 and length(tok) = 24, 'tokens';
 
+  perform public.test_approve(slug);
   pub := public.meal_get_public_board(slug);
   assert pub->'board'->>'familyName' = 'Cohen';
   assert not (pub::text like '%Oak St%') and not (pub::text like '%050-%') and not (pub::text like '%dana@%'), 'public board leaks private data';
