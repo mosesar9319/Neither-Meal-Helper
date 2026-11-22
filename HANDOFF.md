@@ -1,167 +1,165 @@
-# Handoff: Neighbors for Neighbors (שכנות למען שכנות)
+# Handoff: שכנות למען שכנות · Neighbors for Neighbors
 
-Status as of 2026-11-22. Repo: `mosesar9319/Neither-Meal-Helper`, branch
-`claude/neighborly-meal-circle-redesign-ncgqq2` (everything is committed and pushed; no PR opened).
+Status as of 2026-11-22. Repo `mosesar9319/Neither-Meal-Helper`, branch
+`claude/neighborly-meal-circle-redesign-ncgqq2`. Everything is committed and pushed; no pull request is open.
 
-## Changes on 2026-11-22 (owner's requests)
+## What it is
 
-1. Site name is now "שכנות למען שכנות" (English stays "Neighbors for Neighbors").
-2. Light purple palette (`src/index.css` tokens; green kept for "covered").
-3. **Admin approval for meal requests only.** New boards start `pending`; hidden from
-   the public link and closed to sign-ups until a site admin approves at `/admin`.
-   Decline takes a note shown to the organizer; editing a declined request resubmits it.
-   Approved boards are shared by link only (no public listing). Neighbor sign-ups are
-   not moderated. Admins sign in by email link (Supabase Auth) and must be listed in
-   `meal_admins` with a confirmed email.
-4. **Email reminders** the evening before; email is now required to sign up to cook.
-   pg_cron + pg_net + Vault schedule live in the database; all 5 `meal-*` functions are deployed.
+A Hebrew-first (RTL) web app, with English, for organizing meals for a family after a birth, during illness,
+or in hard times. An organizer sends a **meal request**; a **site admin approves** it; the organizer shares the
+board link (usually in a WhatsApp group); neighbors pick a meal to cook and get an **email reminder the evening
+before**. No user accounts except for admins. Light purple theme, light/dark following the system.
 
-## What this is
+It rebuilds an earlier Lovable app (`neighborly-meal-circle.lovable.app`) with a new design and more features.
 
-A web app where an organizer opens a "meal board" for a family (after a birth, illness, hard times),
-shares the link in a neighborhood WhatsApp group, and neighbors sign up to bring a meal on a given day.
-Hebrew first (RTL) with English, light/dark following the system. No user accounts.
+## Current state at a glance
 
-It is a ground-up rebuild of an existing Lovable app (`neighborly-meal-circle.lovable.app`), which had
-4 pages: home, one long create form, a day-card board, and a secret-link organizer page. The new app keeps
-that model and adds the features listed below.
+| Area | State |
+| --- | --- |
+| App code | Done and tested (unit, SQL, browser) |
+| Database (Supabase) | Live; 3 migrations applied |
+| Email functions | 5 deployed and reachable; **send nothing** until Resend secrets exist |
+| Reminder schedule | Live (pg_cron, daily 16:07 UTC) |
+| Admins | 2 emails in `meal_admins`; neither has signed in yet |
+| Hosting | **Not deployed.** Netlify connector was never usable in the previous session |
+| Admin sign-in email | **Likely blocked** until Supabase Auth uses custom SMTP (see open items) |
 
-## Stack
+## Your first tasks (in order)
 
-React 19 + TypeScript + Vite + Tailwind v4 + react-router. `@hebcal/core` for Shabbat and Yom Tov.
-Supabase (Postgres) for data. Deno Edge Functions + Resend for email (written, not deployed).
-Tests: Vitest (unit) and plain SQL (database).
+1. **Deploy the site** (Netlify or any static host).
+   - Build `npm run build`, publish `dist/`. `public/_redirects` already sends all paths to `index.html` on Netlify.
+   - Environment variables (`.env` is git-ignored, so set them on the host):
+     - `VITE_SUPABASE_URL=https://vipbambqmpjftdzouwsi.supabase.co`
+     - `VITE_SUPABASE_ANON_KEY=` the project's **publishable** key (`sb_publishable_…`). The owner has it;
+       it's also in Supabase → Project Settings → API. It is safe in the browser by design.
+     - `VITE_EMAIL_ENABLED=true` only after step 2.
+   - Check: open `/`, send a test request, confirm `/b/<slug>` shows "not found" while pending, then delete the test.
+2. **Turn on email** (needs the owner): a Resend account and a verified sender. Set Edge Function secrets
+   `MEAL_RESEND_API_KEY`, `MEAL_EMAIL_FROM` (e.g. `שכנות למען שכנות <meals@their-domain>`), and
+   `MEAL_SITE_URL` (the deployed address, no trailing slash). Never put these in `VITE_*` variables.
+3. **Make admin sign-in work** (owner, in the Supabase dashboard):
+   - Authentication → SMTP: send through Resend's SMTP. Supabase's built-in mailer is heavily rate-limited and,
+     as far as we know, only delivers to members of the Supabase organization, so the admins' sign-in links
+     probably won't arrive without this. Not verified.
+   - Authentication → URL Configuration → Redirect URLs: add `<site>/admin`. Otherwise sign-in links go to the
+     project's default Site URL, which belongs to the other app.
+   - The Auth email templates are shared with the other app (see "Shared project").
+4. Then do a full live check: request → admin approves at `/admin` → organizer email → neighbor signs up →
+   confirmation email → reminder the evening before.
 
-## What was built
+## Shared Supabase project (read before touching the database)
 
-**Neighbors:** board as calendar or list with Hebrew dates and a "meals covered" bar; sign up for a
-specific meal (breakfast/lunch/dinner) with dish, phone, optional email; see dishes already planned;
-after signing up see address, instructions, drop-off window; add-to-calendar (Google link and `.ics`
-with two alarms); personal link (`/s/:token`) to edit or cancel.
+- Project `vipbambqmpjftdzouwsi`, named **"signature-filings"**, region us-east-1, free plan. It also hosts an
+  unrelated orders app (`customers`, `orders`, `order_items`, `admin_users`, `contact_messages`). The free plan's
+  2-project limit forced the sharing. **Don't touch the other app's tables, functions, policies or Auth settings
+  beyond what the meal app needs.**
+- Everything for this app is prefixed: tables `meal_*`, browser functions `public.meal_*`, helpers in the
+  `meal_private` schema, Edge Functions `meal-*`, secrets `MEAL_*`, cron job `meal-send-reminders`.
+- Supabase Auth (users, SMTP, templates, redirect URLs) is shared. A meal admin's Auth account can't see the other
+  app's data: every policy there requires its own `admin_users` row (checked 2026-11-22).
+- The free project pauses after about a week without activity, which takes both apps down.
+- The security advisor flags the `meal_*` functions as callable without signing in and the `meal_*` tables as
+  "RLS enabled, no policy". Both are deliberate (see Architecture). Two other warnings belong to the other app.
 
-**Organizers:** 4-step wizard (family, food, days, delivery); structured kashrut (level, chalav/pas/bishul
-Yisrael, glatt, no kitniyot), meat/dairy/parve, dietary tags, allergies; several meals per day and up to
-5 neighbors per meal; Shabbat and Yom Tov auto-closed (Israel or diaspora calendar), early drop-off window
-on Fridays and holiday eves; tap any day to close or reopen; management page (`/m/:token`) with overview,
-sign-ups (call and WhatsApp buttons), a ready-made "still open" WhatsApp message, day calendar, details
-editor, co-organizers (own link; cannot delete the board), "new since last visit" badge; links remembered
-on the device and a `/links` recovery page.
+## Live data you should know about
+
+- **One real request** (family רוזנפלד, Nov 18 – Dec 1, 1 past sign-up) existed before approvals. When the
+  approval migration added `status`, it became `pending`. The owner chose to leave it waiting for an admin.
+  Don't approve or delete it yourself.
+- `meal_admins` holds the 2 emails the owner chose. Add or remove admins only when the owner asks.
+
+## Architecture
+
+1. **No accounts for organizers or neighbors; capability links.** Public slug `/b/:slug`; neighbor's own sign-up
+   `/s/:token`; organizer `/m/:token`. Tokens are 18 random bytes, base64url.
+2. **Tables are closed to the browser.** RLS on, no policies, no grants to `anon`/`authenticated`. The browser calls
+   only `SECURITY DEFINER` functions `public.meal_*`, which check the slug, token, or (for `meal_admin_*`) that the
+   signed-in user's **confirmed** email is in `meal_admins`. Supabase grants new public functions to `anon` by
+   default, so the migrations revoke what visitors must not call.
+3. **Approval:** `meal_boards.status` is `pending | approved | declined`. Only approved boards are visible or take
+   sign-ups. Editing a declined board sets it back to pending. Admin actions: approve, decline with a note,
+   move back to waiting, delete, manage the admin list (can't remove yourself or the last admin).
+4. **Privacy:** the public board shows first names only. Address/phone go to a sign-up token holder; the
+   organizer's email only to managers and admins.
+5. **Rules exist twice.** Client: `src/lib/api/validate.ts` and `src/lib/schedule.ts`. Server: the SQL functions.
+   `src/lib/api/local.ts` is a **demo mode** with the same rules (used when no Supabase env vars are set; the visitor
+   acts as a demo admin there). Keep all three in step.
+6. **Closed days are stored** (`blocked_dates`): Shabbat/Yom Tov (Israel or diaspora calendar via `@hebcal/core`)
+   plus the organizer's manual changes. The server enforces the stored list.
+7. **Email is opt-in on the client:** the app calls the Edge Functions only when `VITE_EMAIL_ENABLED=true`.
+
+## Email functions (all deployed with JWT verification off; each checks its own caller)
+
+| Function | Trigger | Caller check |
+| --- | --- | --- |
+| `meal-notify-request` | App, after a request is sent | Organizer's manage token; sends once (`admins_notified_at`) |
+| `meal-notify-decision` | App, after an admin approves/declines | Caller's Supabase session must be a listed, confirmed admin |
+| `meal-notify-signup` | App, after a sign-up | Neighbor's edit token; sends once (`notified_at`) |
+| `meal-send-reminders` | pg_cron daily 16:07 UTC (18:07/19:07 Israel) | Secret in Supabase Vault, checked by `meal_check_cron_secret` (service role only) |
+| `meal-recover-links` | `/links` page | None needed; always answers OK; links go only to the matching email |
+
+The cron job, Vault secret and check function are in `supabase/setup/meal_reminder_schedule.sql`
+(project-specific, applied live, not run by the test script). The function source of truth is
+`supabase/functions/`. They were deployed with the Supabase MCP tool, uploading `../_shared/common.ts`
+next to each `index.ts`.
 
 ## Routes
 
-`/` home · `/new` wizard · `/b/:slug` public board · `/s/:token` neighbor's own sign-up ·
-`/m/:token` organizer · `/links` find your links.
+`/` home · `/new` request wizard · `/b/:slug` board · `/s/:token` my sign-up · `/m/:token` organizer ·
+`/admin` admin sign-in and review · `/links` find your links.
 
-## Architecture decisions worth knowing
+## Verified on 2026-11-22
 
-1. **No accounts; capability links.** A public slug shows the board. A sign-up token (`/s/…`) and a manager
-   token (`/m/…`) are the only credentials. Tokens are 18 random bytes, base64url.
-2. **Tables are closed to the browser.** RLS is on, there are no policies and no grants for `anon` /
-   `authenticated`. The browser only calls `SECURITY DEFINER` functions named `meal_*`, which check the slug
-   or token. Helpers live in the `meal_private` schema (execute revoked). See
-   `supabase/migrations/20261116000000_init.sql`.
-3. **Privacy:** the public board returns first names only; address, phone and organizer email are returned only
-   to a sign-up token holder (not the email) or a manager.
-4. **Same rules twice.** `src/lib/api/validate.ts` + `src/lib/schedule.ts` (client) mirror the SQL checks.
-   `src/lib/api/local.ts` is a demo-mode data layer with the same behavior, used when no Supabase env vars are
-   set. The Supabase adapter (`src/lib/api/supabase.ts`) prefixes every call with `meal_`.
-5. **Blocked days are stored.** `blocked_dates` on the board is the computed result (auto Shabbat/holidays plus
-   manual changes); the server enforces the stored list, so a later change to holiday rules doesn't silently
-   reopen days.
-6. **Dates are plain `YYYY-MM-DD` strings** in local time; the server allows one day of slack for UTC.
-7. **Email is opt-in:** the app calls the Edge Functions only when `VITE_EMAIL_ENABLED=true`.
+- `npx vitest run`: 12 tests pass. `npm run build` passes. `deno check supabase/functions/meal-*/index.ts` passes.
+- `npm run test:db -- <psql args>`: `tests/sql/rpc.test.sql` and `tests/sql/admin.test.sql` pass on Postgres 16 (uses a
+  stand-in `auth` schema; creates and drops its own database).
+- Browser (Playwright), demo mode: request → pending → admin declines with a note → organizer edits → admin approves →
+  neighbor signs up (email required and validated) → edits → organizer view. Hebrew phone layout has no sideways scroll.
+- Live: request → hidden while pending → approved (by SQL, since no admin has signed in) → sign-up; `meal-notify-request`
+  and `meal-notify-signup` returned 200. Visitors are refused by `meal_admin_*`, `meal_admins`, and
+  `meal_check_cron_secret`. The reminder job ran through pg_cron's path and returned `{"ok":true,"day":"<tomorrow>","sent":0}`.
+  Test data was deleted.
+- **Never verified:** an email actually being delivered, and an admin signing in with a real link.
 
-## Live infrastructure (state now)
+## Other open items
 
-- **Supabase project `vipbambqmpjftdzouwsi`** (named "signature-filings", region us-east-1, free plan). It is
-  **shared with another app** because the free plan allows 2 active projects and a new one was refused. All meal
-  objects are prefixed `meal_` so they don't clash. The other app's data was checked before and after and is untouched.
-- Migration applied via the Supabase tool under the name `meal_boards_init`. The four meal tables are empty
-  (test boards were deleted).
-- API URL: `https://vipbambqmpjftdzouwsi.supabase.co`. The publishable key is in the local, git-ignored `.env`
-  and in the Supabase dashboard (Project Settings → API). It is not in this file.
-- Security advisor flags the `meal_*` functions as callable by `anon` and the tables as "RLS enabled, no policy".
-  Both are intentional (see 2). It also flags two pre-existing issues in the other app (`is_admin` executable,
-  leaked-password protection off); left alone.
-- Migrations applied live: `meal_boards_init`, `meal_approval_admins`, `meal_reminder_schedule`.
-  pg_cron and pg_net were enabled for the reminder job (`meal-send-reminders`, daily 16:07 UTC).
-- Edge Functions deployed (JWT verification off; each checks its caller): meal-notify-request,
-  meal-notify-decision, meal-notify-signup, meal-send-reminders, meal-recover-links. **No Resend
-  secrets yet**, so they run but send nothing.
-- Admins listed in `meal_admins`: 2 addresses chosen by the owner (added 2026-11-22). Neither has signed in yet.
-- One pre-existing real board (family רוזנפלד, Nov 18 – Dec 1) became `pending` when the approval
-  migration added the status column; the owner chose to leave it waiting for an admin.
-- **Not deployed anywhere.** No hosting yet; the Netlify connector showed `needs_reconnect` and its tools were
-  not available in the session.
-- **Edge Functions not deployed; Resend not configured.**
-
-## Verified
-
-- `npx vitest run`: 12 tests pass (holiday and Shabbat rules, diaspora calendar, manual overrides, progress,
-  `.ics` output, WhatsApp numbers, full demo-API lifecycle).
-- `npm run test:db -- <psql args>`: SQL tests pass against Postgres 16 (privacy, slot limits, closed days,
-  roles, co-organizer limits, cascade delete, validation). Needs an empty server; it creates and drops its own database.
-- `npm run build`: type-checks and builds.
-- Browser flow (Playwright, Chromium) run against both demo mode and the live Supabase project: create board →
-  neighbor sign-up → planned-dish hint → neighbor edit → organizer view → add co-organizer. No console errors; no
-  horizontal overflow on an iPhone 13 viewport in Hebrew.
-- Direct REST probes with the public key: table reads are denied, `meal_private` helpers are not exposed, unknown slug returns `not_found`.
-
-## Not verified / open items (in rough priority order)
-
-1. **Hosting.** Build with `npm run build`, publish `dist/`. Needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   set on the host (the `.env` is git-ignored). `public/_redirects` handles SPA routing on Netlify; other hosts need an
-   equivalent fallback to `index.html`.
-2. **Email has never actually been sent** (no Resend key yet). The plumbing was verified live: CORS, auth refusals, the cron secret, and "tomorrow in Israel". Older notes: Deploy `notify-signup`, `send-reminders`, `recover-links`; set secrets
-   `RESEND_API_KEY`, `EMAIL_FROM`, `SITE_URL`, `CRON_SECRET`; schedule `send-reminders` daily with
-   `Authorization: Bearer <CRON_SECRET>`; then set `VITE_EMAIL_ENABLED=true`.
-   **Likely gotcha (untested):** the browser calls `notify-signup` and `recover-links` with the publishable key,
-   which is not a JWT, so deploy those with JWT verification off (`--no-verify-jwt`); `send-reminders` authenticates
-   itself with `CRON_SECRET`, so also off.
-3. **No abuse protection.** Anyone with a board link can create unlimited sign-ups, and anyone can create boards.
-   Consider rate limiting or a captcha before sharing widely.
-4. **Migration history.** The migration was applied through the Supabase tool, so the remote migration version
-   differs from the local file name `20261116000000_init.sql`. If you adopt the Supabase CLI (`db push`), reconcile
-   history first (`supabase migration repair`) to avoid re-running it.
-5. **Shared project risk.** Free projects pause after about a week of inactivity, which would take the meal app
-   down too. Moving to a dedicated project means freeing a free-plan slot or upgrading, then re-running the migration there.
-6. **Bundle size:** about 600 KB JS (192 KB gzip), mostly `@hebcal/core` and Supabase. Code-split the board/manage routes if load time matters.
-7. **Not done from the original scope (Phase 3):** other kinds of help besides meals, thank-you wall,
-   multi-board dashboard, board templates.
-8. **No theme toggle** (follows system), no automated browser tests in the repo (the Playwright script I used lived in a scratch folder and is not included).
+1. No abuse protection: anyone can send many requests or sign-ups. Consider rate limiting or a captcha.
+2. Migration history: applied via the Supabase MCP tool as `meal_boards_init`, `meal_approval_admins`,
+   `meal_reminder_schedule`, so remote versions differ from the local file names. Run `supabase migration repair`
+   before any `supabase db push`.
+3. Bundle about 600 KB (190 KB gzip), mostly `@hebcal/core` and Supabase. Code-split routes if load time matters.
+4. Not built yet: other kinds of help besides meals, a thank-you wall, multi-board dashboard, templates, a theme toggle,
+   browser tests committed to the repo.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev          # demo mode if no .env; boards stay in the browser
-npm test             # unit tests
+npm run dev     # demo mode without .env
+npm test
 npm run build
-npm run test:db -- -h localhost -p 5432 -U postgres   # SQL tests
+npm run test:db -- -h localhost -p 5432 -U postgres
 ```
 
 ## Map of the code
 
 ```
-src/lib/types.ts          domain types and limits
-src/lib/dates.ts          plain-date helpers, formatting
-src/lib/jewishCalendar.ts holidays and Hebrew dates (hebcal)
-src/lib/schedule.ts       day kinds, blocking, progress, delivery windows
-src/lib/i18n.tsx          all UI text (en + he) and label tables
-src/lib/api/              Api interface; local.ts (demo), supabase.ts, validate.ts
-src/lib/device.ts         links remembered in localStorage (guarded)
-src/lib/calendarExport.ts .ics and Google Calendar links
-src/components/           ui kit, Calendar, BoardForm, BoardView, SignupParts, Layout
-src/pages/                Home, NewBoard, PublicBoard, MySignup, Manage, Links
-supabase/migrations/      schema, functions, grants
-supabase/functions/       notify-signup, send-reminders, recover-links, _shared
-tests/                    vitest + sql/rpc.test.sql
+src/lib/types.ts           domain types and limits
+src/lib/schedule.ts        day kinds, closed days, progress, delivery windows
+src/lib/jewishCalendar.ts  holidays and Hebrew dates
+src/lib/i18n.tsx           all UI text, Hebrew and English
+src/lib/api/               Api interface; supabase.ts, local.ts (demo), validate.ts
+src/pages/                 Home, NewBoard, PublicBoard, MySignup, Manage, Links, Admin
+src/components/            ui kit, Calendar, BoardForm, BoardView, SignupParts, Layout
+supabase/migrations/       portable schema and functions (run by the test script)
+supabase/setup/            project-specific reminder schedule
+supabase/functions/        meal-* Edge Functions and _shared/common.ts
+tests/                     vitest + sql/*.test.sql
 ```
 
 ## Conventions
 
-- Every new database object gets the `meal_` prefix; browser-callable logic goes in a `meal_*` function in `public`,
-  internals in `meal_private`. Never add grants or policies that expose the tables.
-- User-facing text goes through `src/lib/i18n.tsx` in both languages.
-- Use logical CSS (`ms-`, `me-`, `start-`, `end-`) so RTL works; keep tokens in `src/index.css`.
-- Don't commit `.env`. Don't put secrets in `VITE_*` variables (they ship to the browser); the Resend key and service role live only in Edge Function secrets.
+- Prefix every new database object, function, secret and job with `meal`.
+- All user-facing text goes in `src/lib/i18n.tsx`, in both languages.
+- Logical CSS only (`ms-`, `me-`, `start-`, `end-`) so RTL works; colors are tokens in `src/index.css`.
+- Never commit `.env`; never put secrets in `VITE_*` variables.
