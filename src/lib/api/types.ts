@@ -17,6 +17,8 @@ export type ApiErrorCode =
   | 'invalid'
   | 'forbidden'
   | 'unavailable'
+  | 'rate_limited'
+  | 'signup_disabled'
   | 'unknown';
 
 export class ApiError extends Error {

@@ -1,0 +1,15 @@
+<!-- Supabase → Authentication → Emails → "Magic link". Subject: קישור כניסה · Your sign-in link
+     Neutral wording on purpose: this project's Auth emails are shared with another app. -->
+<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#2A2238;max-width:520px;margin:0 auto;padding:24px">
+  <h2 style="margin:0 0 12px">קישור הכניסה שלך</h2>
+  <p style="margin:0 0 20px">לחצו על הכפתור כדי להיכנס. הקישור תקף לזמן קצר ולשימוש אחד.</p>
+  <p style="margin:0 0 28px">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#7B4FB8;color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">כניסה</a>
+  </p>
+  <div dir="ltr" style="border-top:1px solid #E4DAF3;padding-top:16px;text-align:left">
+    <h3 style="margin:0 0 8px;font-size:16px">Your sign-in link</h3>
+    <p style="margin:0 0 16px">Click the button to sign in. The link works once and expires soon.</p>
+    <p style="margin:0 0 16px"><a href="{{ .ConfirmationURL }}" style="color:#7B4FB8">Sign in</a></p>
+  </div>
+  <p style="color:#6D6480;font-size:13px;margin-top:24px">לא ביקשת? אפשר להתעלם מהמייל. · Didn't ask for this? You can ignore this email.</p>
+</div>

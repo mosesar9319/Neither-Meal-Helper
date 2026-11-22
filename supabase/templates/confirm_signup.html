@@ -1,0 +1,15 @@
+<!-- Supabase → Authentication → Emails → "Confirm signup". Subject: אישור כתובת המייל · Confirm your email
+     This one is sent the first time someone signs in with a link. Neutral wording: Auth is shared with another app. -->
+<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#2A2238;max-width:520px;margin:0 auto;padding:24px">
+  <h2 style="margin:0 0 12px">אישור כתובת המייל</h2>
+  <p style="margin:0 0 20px">לחצו על הכפתור כדי לאשר את כתובת המייל ולהיכנס.</p>
+  <p style="margin:0 0 28px">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#7B4FB8;color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold">אישור וכניסה</a>
+  </p>
+  <div dir="ltr" style="border-top:1px solid #E4DAF3;padding-top:16px;text-align:left">
+    <h3 style="margin:0 0 8px;font-size:16px">Confirm your email</h3>
+    <p style="margin:0 0 16px">Click the button to confirm your email address and sign in.</p>
+    <p style="margin:0 0 16px"><a href="{{ .ConfirmationURL }}" style="color:#7B4FB8">Confirm and sign in</a></p>
+  </div>
+  <p style="color:#6D6480;font-size:13px;margin-top:24px">לא ביקשת? אפשר להתעלם מהמייל. · Didn't ask for this? You can ignore this email.</p>
+</div>

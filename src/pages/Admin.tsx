@@ -17,10 +17,10 @@ type Tab = BoardStatus | 'admins';
 
 function SignIn() {
   const { t } = useI18n();
-  const toast = useToast();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<{ message: string; detail: string } | null>(null);
   return (
     <Page width="sm">
       <Card className="space-y-4 p-6 sm:p-8">
@@ -38,11 +38,16 @@ function SignIn() {
               e.preventDefault();
               if (!email.trim()) return;
               setBusy(true);
+              setError(null);
               try {
                 await api.admin.requestLink(email, absoluteUrl('/admin'));
                 setSent(true);
-              } catch {
-                toast(t.error, 'error');
+              } catch (err) {
+                const code = err instanceof ApiError ? err.code : 'unknown';
+                setError({
+                  message: code === 'rate_limited' ? t.linkErrorRate : code === 'signup_disabled' ? t.linkErrorNoAccount : t.linkErrorGeneric,
+                  detail: err instanceof Error ? err.message : '',
+                });
               } finally {
                 setBusy(false);
               }
@@ -51,6 +56,16 @@ function SignIn() {
             <Field id="admin-email" label={t.email}>
               <TextInput id="admin-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
+            {error && (
+              <div role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
+                <p className="font-medium">{error.message}</p>
+                {error.detail && (
+                  <p dir="ltr" className="mt-1 text-xs opacity-80">
+                    {error.detail}
+                  </p>
+                )}
+              </div>
+            )}
             <Button type="submit" disabled={busy || !email.trim()} className="w-full">
               {busy ? <Spinner /> : <Mail className="size-4" aria-hidden />}
               {t.sendLink}

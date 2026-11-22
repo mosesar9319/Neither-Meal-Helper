@@ -92,13 +92,21 @@ each checks its own caller.
 Secrets (prefixed because the project is shared): `MEAL_RESEND_API_KEY`,
 `MEAL_EMAIL_FROM`, `MEAL_SITE_URL`. Then set `VITE_EMAIL_ENABLED=true` for the site.
 
+Every email is claimed before sending and carries a Resend `Idempotency-Key`, so
+retries never deliver twice. Pure email logic lives in `supabase/functions/_shared/logic.ts`
+and is unit-tested; `supabase/config.toml` records the functions' settings.
+
+Paste the bilingual Auth email templates from `supabase/templates/` into Supabase →
+Authentication → Emails (Magic link, Confirm signup).
+
 The daily reminder run is scheduled inside the database with pg_cron
 (`supabase/setup/meal_reminder_schedule.sql`, 16:07 UTC = 18:07 Israel winter
 time). It authenticates with a random secret kept in Supabase Vault.
 
 ## Deploy
 
-`npm run build` produces a static site in `dist/`. Any static host works; the
+Live at https://neighborly-meal-circle.netlify.app (Netlify builds this branch; settings in
+`netlify.toml`). `npm run build` produces a static site in `dist/`. Any static host works; the
 host must send unknown paths to `index.html` (`public/_redirects` does this on Netlify).
 
 ## Project layout

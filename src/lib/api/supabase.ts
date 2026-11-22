@@ -76,7 +76,12 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
         const allowed = await rpc<boolean>('admin_login_allowed', { p_email: clean });
         if (!allowed) return;
         const { error } = await sb.auth.signInWithOtp({ email: clean, options: { emailRedirectTo: redirectTo, shouldCreateUser: true } });
-        if (error) throw new ApiError('unknown', error.message);
+        if (error) {
+          const msg = error.message ?? '';
+          if (error.status === 429 || /rate limit|too many/i.test(msg)) throw new ApiError('rate_limited', msg);
+          if (/signups? not allowed|signup.*disabled/i.test(msg)) throw new ApiError('signup_disabled', msg);
+          throw new ApiError('unknown', msg);
+        }
       },
       async signOut() {
         await sb.auth.signOut();

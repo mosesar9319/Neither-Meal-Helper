@@ -143,3 +143,35 @@ begin
 
   raise notice 'ALL DATABASE TESTS PASSED';
 end $$;
+
+-- ---------------------------------------------------------------- organizer lookup (recover links)
+reset role;
+do $$
+declare s1 text; s2 text; b1 uuid; b2 uuid;
+begin
+  s1 := public.meal_create_board(jsonb_build_object(
+    'familyName', 'A', 'startDate', current_date + 1, 'endDate', current_date + 2,
+    'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
+    'private', '{"address":"","instructions":"","phone":"","organizerEmail":"Dana_Levi@Example.com"}'::jsonb))->>'slug';
+  s2 := public.meal_create_board(jsonb_build_object(
+    'familyName', 'B', 'startDate', current_date + 1, 'endDate', current_date + 2,
+    'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
+    'private', '{"address":"","instructions":"","phone":"","organizerEmail":"danaxlevi@example.com"}'::jsonb))->>'slug';
+  select id into b1 from public.meal_boards where slug = s1;
+  select id into b2 from public.meal_boards where slug = s2;
+  -- Case-insensitive exact match.
+  assert (select array_agg(board_id) from public.meal_organizer_board_ids(' dana_levi@example.com ')) = array[b1];
+  -- "_" and "%" are not wildcards.
+  assert not exists (select 1 from public.meal_organizer_board_ids('dana%levi@example.com'));
+  assert (select count(*) from public.meal_organizer_board_ids('dana_levi@example.com')) = 1;
+  assert not exists (select 1 from public.meal_organizer_board_ids(''));
+  raise notice 'ORGANIZER LOOKUP TESTS PASSED';
+end $$;
+set role anon;
+do $$ begin
+  begin
+    perform public.meal_organizer_board_ids('x@example.com');
+    raise exception 'anon could call meal_organizer_board_ids';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
