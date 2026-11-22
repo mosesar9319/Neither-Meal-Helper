@@ -15,6 +15,23 @@ Status as of 2026-11-22 (afternoon). Repo `mosesar9319/Neither-Meal-Helper`, bra
 
 Live site: **https://neighborly-meal-circle.netlify.app**
 
+## Sign-in, take offline, delete (2026-11-22, PR #4)
+
+- **One sign-in page for everyone** at `/login` (Google or an emailed link; `?next=` returns people where they
+  were, same-site paths only). The header shows "כניסה" when signed out. `/admin` and `/me` send signed-out
+  visitors there. Admins see an "admin area" button after signing in.
+- **Signing in is required** to send a meal request (`/new`) or to sign up to cook. Enforced in SQL by migration
+  `20261122030000_signin_required.sql` (`signin_required` error). **Apply that migration when PR #4 merges**, not
+  before: the live site before #4 still lets visitors request without signing in. Private links (`/m/…`, `/s/…`)
+  keep working without signing in. Demo mode acts as a signed-in user.
+- **Take offline / delete:** new status `offline` (migration `20261122020000_offline_status.sql`, applied live).
+  Admins: "הורדה מהאתר" on approved boards, "החזרה לאתר" on the "הוסרו מהאתר" tab, and "מחיקה לצמיתות" on
+  every board with a confirmation. Offline boards are hidden, take no sign-ups and get no reminders.
+- **Redirect URLs:** for sign-in to return to any page, Supabase → Authentication → URL Configuration must allow
+  `https://neighborly-meal-circle.netlify.app/**`. To sign in on deploy previews, also allow
+  `https://*--neighborly-meal-circle.netlify.app/**`; otherwise previews send people to the project's Site URL
+  (the other app's site).
+
 ## What it is
 
 A Hebrew-first (RTL) web app, with English, for organizing meals for a family after a birth, during illness,

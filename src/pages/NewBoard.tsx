@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { FamilySection, FoodSection, PrivateSection, ScheduleSection, validateBoard, type Errors } from '../components/BoardForm';
 import { BoardSummary } from '../components/BoardView';
-import { GoogleButton } from '../components/GoogleButton';
-import { Page, useTitle } from '../components/Layout';
+import { LoadingState, Page, useTitle } from '../components/Layout';
+import { LoginPanel } from '../components/LoginPanel';
 import { Button, Card, Spinner, cx, useToast } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
@@ -94,6 +94,22 @@ export function NewBoard() {
   };
 
   const days = computeDays(value);
+
+  // Sending a request needs a signed-in account.
+  if (accountLoading) return <LoadingState />;
+  if (!user) {
+    return (
+      <Page width="sm">
+        <Card className="space-y-5 p-6 sm:p-8">
+          <div>
+            <h1 className="mb-2 text-3xl font-bold">{t.newBoard}</h1>
+            <p className="text-muted">{t.signInToRequest}</p>
+          </div>
+          <LoginPanel next="/new" />
+        </Card>
+      </Page>
+    );
+  }
   const open = days.filter((d) => !d.blocked).length;
 
   return (
@@ -133,12 +149,6 @@ export function NewBoard() {
         <Card className="p-5 sm:p-7">
           <div key={step} className="animate-rise">
             <h2 className="mb-6 text-2xl font-bold">{steps[step]}</h2>
-            {step === 0 && api.googleEnabled && !accountLoading && !user && (
-              <div className="mb-6 space-y-3 rounded-2xl bg-surface-2/70 p-4">
-                <p className="text-sm text-muted">{t.googleHint}</p>
-                <GoogleButton returnPath="/new" />
-              </div>
-            )}
             {step === 0 && <FamilySection value={value} onChange={update} errors={errors} />}
             {step === 1 && <FoodSection value={value} onChange={update} />}
             {step === 2 && <ScheduleSection value={value} onChange={update} errors={errors} />}

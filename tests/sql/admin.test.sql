@@ -9,8 +9,9 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-00000000000c', 'second@example.com', null);
 insert into public.meal_admins (email) values ('admin@example.com'), ('second@example.com');
 
--- ---------------------------------------------------------------- as a visitor
-set role anon;
+-- ---------------------------------------------------------------- a signed-in requester
+set role authenticated;
+set request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b"}';
 do $$
 declare
   r jsonb; slug text; tok text;
@@ -38,7 +39,14 @@ begin
     perform public.meal_sign_up(slug, contact);
     raise exception 'expected not_found';
   exception when raise_exception then assert sqlerrm = 'not_found', sqlerrm; end;
+end $$;
 
+-- ---------------------------------------------------------------- as a visitor
+reset role;
+set request.jwt.claims = '';
+set role anon;
+do $$
+begin
   -- Visitors may ask whether an email can sign in, and nothing else.
   assert public.meal_admin_login_allowed(' ADMIN@example.com ') = true;
   assert public.meal_admin_login_allowed('someone@example.com') = false;
@@ -122,6 +130,24 @@ begin
   assert public.meal_get_public_board(slug)->'board'->>'status' = 'approved';
   assert exists (select 1 from jsonb_array_elements(public.meal_admin_list_requests('approved')) x where x->>'slug' = slug);
   assert not exists (select 1 from jsonb_array_elements(public.meal_admin_list_requests('pending')) x where x->>'slug' = slug);
+
+  -- Take offline: hidden and closed to sign-ups, but kept; then back online.
+  perform public.meal_admin_review(slug, 'offline', '');
+  assert public.meal_get_manage(tok)->'board'->>'status' = 'offline';
+  assert exists (select 1 from jsonb_array_elements(public.meal_admin_list_requests('offline')) x where x->>'slug' = slug);
+  begin
+    perform public.meal_get_public_board(slug);
+    raise exception 'expected not_found';
+  exception when raise_exception then assert sqlerrm = 'not_found', sqlerrm; end;
+  -- Editing an offline board doesn't put it back online by itself.
+  perform public.meal_update_board(tok, jsonb_build_object(
+    'familyName', 'Levi', 'startDate', current_date + 1, 'endDate', current_date + 4,
+    'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb,
+    'details', '{"organizerName":"Dana"}'::jsonb,
+    'private', '{"address":"1 Elm St, Apt 2","instructions":"","phone":"050","organizerEmail":"dana@example.com"}'::jsonb));
+  assert public.meal_get_manage(tok)->'board'->>'status' = 'offline';
+  perform public.meal_admin_review(slug, 'approved', '');
+  assert public.meal_get_public_board(slug)->'board'->>'status' = 'approved';
 
   -- Sign-ups need a valid email.
   begin

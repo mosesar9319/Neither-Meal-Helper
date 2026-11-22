@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { Link, Outlet, ScrollRestoration } from 'react-router';
+import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router';
 import { House, Info, SearchX, UserRound } from 'lucide-react';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
@@ -31,7 +31,20 @@ export function Logo({ className = 'size-9' }: { className?: string }) {
 function AccountLink() {
   const { t } = useI18n();
   const { loading, user } = useAccount();
-  if (!api.googleEnabled || loading) return null;
+  const location = useLocation();
+  if (loading) return <span className="inline-block h-9 w-9" aria-hidden />;
+  if (!user) {
+    const next = location.pathname === '/login' ? '/me' : location.pathname + location.search;
+    return (
+      <Link
+        to={`/login?next=${encodeURIComponent(next)}`}
+        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-sm font-medium text-primary-ink shadow-card hover:bg-primary-hover sm:px-4"
+      >
+        <UserRound className="size-4" aria-hidden />
+        {t.signIn}
+      </Link>
+    );
+  }
   return (
     <Link to="/me" className="inline-flex h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-sm font-medium hover:bg-surface-2" aria-label={t.myTitle}>
       {user?.avatarUrl ? (
@@ -39,7 +52,7 @@ function AccountLink() {
       ) : (
         <UserRound className="size-4" aria-hidden />
       )}
-      <span className="hidden max-w-28 truncate sm:inline">{user ? user.name.split(' ')[0] || user.email : t.signIn}</span>
+      <span className="hidden max-w-28 truncate sm:inline">{user.name.split(' ')[0] || user.email.split('@')[0]}</span>
     </Link>
   );
 }

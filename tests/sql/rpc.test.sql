@@ -17,6 +17,12 @@ do $$ begin
 end $$;
 
 
+-- Requesting and signing up need a signed-in user (since 2026-11-22).
+reset role;
+insert into auth.users (id, email, email_confirmed_at) values ('00000000-0000-0000-0000-0000000000e1', 'organizer@example.com', now());
+set role authenticated;
+set request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000e1"}';
+
 do $$
 declare
   r jsonb; slug text; tok text; edit text; edit2 text; co text; pub jsonb; m jsonb;

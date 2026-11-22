@@ -71,6 +71,23 @@ function openMealsMessage(days: DaySlots<Signup>[], familyName: string, url: str
 function StatusBanner({ status, note }: { status: ManageData['board']['status']; note: string }) {
   const { t } = useI18n();
   if (status === 'approved') return null;
+  if (status === 'offline') {
+    return (
+      <div role="status" className="flex items-start gap-3 rounded-3xl bg-surface-2 p-5 text-ink">
+        <AlertCircle className="mt-0.5 size-6 shrink-0 text-muted" aria-hidden />
+        <div className="space-y-1">
+          <p className="text-lg font-semibold">{t.statusOfflineTitle}</p>
+          <p className="text-muted">{t.statusOfflineText}</p>
+          {note && (
+            <p className="pt-1">
+              <strong className="font-semibold">{t.adminNote}: </strong>
+              {note}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
   const pending = status === 'pending';
   return (
     <div role="status" className={cx('flex items-start gap-3 rounded-3xl p-5', pending ? 'bg-primary-soft text-primary' : 'bg-warn-soft text-warn')}>

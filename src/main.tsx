@@ -8,6 +8,7 @@ import { I18nProvider } from './lib/i18n';
 import { Admin } from './pages/Admin';
 import { Home } from './pages/Home';
 import { Links } from './pages/Links';
+import { Login } from './pages/Login';
 import { Manage } from './pages/Manage';
 import { MyAccount } from './pages/MyAccount';
 import { MySignup } from './pages/MySignup';
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: '/links', element: <Links /> },
       { path: '/admin', element: <Admin /> },
       { path: '/me', element: <MyAccount /> },
+      { path: '/login', element: <Login /> },
       { path: '/privacy', element: <Privacy /> },
       { path: '*', element: <NotFoundState /> },
     ],

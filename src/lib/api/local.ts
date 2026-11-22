@@ -259,11 +259,12 @@ export const localApi: Api = {
     /* no email in demo mode */
   },
 
-  // Demo mode has no Google sign-in; links saved on the device still work.
+  // Demo mode acts as an already signed-in neighbor, so the whole flow can be tried.
   account: {
     async user() {
-      return null;
+      return { email: 'demo-neighbor@example.com', name: 'Demo', avatarUrl: '' };
     },
+    async requestEmailLink() {},
     onChange() {
       return () => {};
     },

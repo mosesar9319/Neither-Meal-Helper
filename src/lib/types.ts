@@ -58,7 +58,7 @@ export interface OrganizerPrivate extends PrivateDetails {
   organizerEmail: string;
 }
 
-export type BoardStatus = 'pending' | 'approved' | 'declined';
+export type BoardStatus = 'pending' | 'approved' | 'declined' | 'offline';
 
 export interface Board {
   slug: string;

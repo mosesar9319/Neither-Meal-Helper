@@ -16,11 +16,10 @@ function linkDevice(user: AccountUser) {
   });
 }
 
-/** The signed-in person (Continue with Google), or null. Always null when Google sign-in is off. */
+/** The signed-in person (Google or email link), or null. */
 export function useAccount() {
-  const [state, setState] = useState<{ loading: boolean; user: AccountUser | null }>({ loading: api.googleEnabled, user: null });
+  const [state, setState] = useState<{ loading: boolean; user: AccountUser | null }>({ loading: true, user: null });
   useEffect(() => {
-    if (!api.googleEnabled) return;
     let alive = true;
     const load = () =>
       api.account

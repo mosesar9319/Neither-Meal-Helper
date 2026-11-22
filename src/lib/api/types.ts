@@ -21,6 +21,7 @@ export type ApiErrorCode =
   | 'unavailable'
   | 'rate_limited'
   | 'signup_disabled'
+  | 'signin_required'
   | 'unknown';
 
 export class ApiError extends Error {
@@ -40,6 +41,8 @@ export interface AccountApi {
   onChange(cb: () => void): () => void;
   /** Leaves the page for Google and comes back to `returnTo`. */
   signInWithGoogle(returnTo: string): Promise<void>;
+  /** Emails a one-time sign-in link that comes back to `returnTo`. Works for anyone. */
+  requestEmailLink(email: string, returnTo: string): Promise<void>;
   signOut(): Promise<void>;
   activity(): Promise<MyActivity>;
   /** Links requests and meals whose links are saved on this device to the account. */

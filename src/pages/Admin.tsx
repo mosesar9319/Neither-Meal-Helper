@@ -1,91 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router';
-import { Check, ExternalLink, Info, LogOut, Mail, Phone, ShieldCheck, Trash2, Undo2, UserPlus, X } from 'lucide-react';
+import { Link, Navigate } from 'react-router';
+import { Check, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserPlus, X } from 'lucide-react';
 import { BoardSummary } from '../components/BoardView';
-import { GoogleButton, OrDivider } from '../components/GoogleButton';
-import { LoadingState, Page, PrivacyLink, useTitle } from '../components/Layout';
+import { LoadingState, Page, useTitle } from '../components/Layout';
 import { Badge, Button, Card, Dialog, Field, Spinner, TextArea, TextInput, buttonClass, cx, useConfirm, useToast } from '../components/ui';
 import { ApiError, api } from '../lib/api';
 import { formatDate, formatRange } from '../lib/dates';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { computeDays } from '../lib/schedule';
-import { absoluteUrl } from '../lib/share';
 import type { AdminEntry, AdminRequest, BoardStatus } from '../lib/types';
 
 type Tab = BoardStatus | 'admins';
-
-// ---------------------------------------------------------------- sign-in
-
-function SignIn() {
-  const { t } = useI18n();
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<{ message: string; detail: string } | null>(null);
-  return (
-    <Page width="sm">
-      <Card className="space-y-4 p-6 sm:p-8">
-        <ShieldCheck className="size-10 text-primary" aria-hidden />
-        <h1 className="text-3xl font-bold">{t.adminSignInTitle}</h1>
-        <p className="text-muted">{t.adminSignInText}</p>
-        {!sent && (
-          <>
-            <GoogleButton returnPath="/admin" />
-            <OrDivider />
-          </>
-        )}
-        {sent ? (
-          <p role="status" className="rounded-2xl bg-accent-soft px-4 py-3 text-accent">
-            {t.linkSent}
-          </p>
-        ) : (
-          <form
-            className="space-y-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!email.trim()) return;
-              setBusy(true);
-              setError(null);
-              try {
-                await api.admin.requestLink(email, absoluteUrl('/admin'));
-                setSent(true);
-              } catch (err) {
-                const code = err instanceof ApiError ? err.code : 'unknown';
-                setError({
-                  message: code === 'rate_limited' ? t.linkErrorRate : code === 'signup_disabled' ? t.linkErrorNoAccount : t.linkErrorGeneric,
-                  detail: err instanceof Error ? err.message : '',
-                });
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Field id="admin-email" label={t.email}>
-              <TextInput id="admin-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
-            {error && (
-              <div role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
-                <p className="font-medium">{error.message}</p>
-                {error.detail && (
-                  <p dir="ltr" className="mt-1 text-xs opacity-80">
-                    {error.detail}
-                  </p>
-                )}
-              </div>
-            )}
-            <Button type="submit" disabled={busy || !email.trim()} className="w-full">
-              {busy ? <Spinner /> : <Mail className="size-4" aria-hidden />}
-              {t.sendLink}
-            </Button>
-          </form>
-        )}
-        <p className="text-sm text-muted">
-          <PrivacyLink />
-        </p>
-      </Card>
-    </Page>
-  );
-}
 
 // ---------------------------------------------------------------- one request
 
@@ -103,7 +28,8 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
     setBusy(true);
     try {
       await api.admin.review(r.slug, status, reviewNote);
-      if (status !== 'pending') void api.notifyDecision(r.slug);
+      // Approval and decline emails go to the organizer; taking offline is quiet.
+      if (status === 'approved' || status === 'declined') void api.notifyDecision(r.slug);
       toast(message);
       onChanged();
     } catch {
@@ -177,22 +103,41 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
       )}
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-        {r.status !== 'approved' && (
+        {(r.status === 'pending' || r.status === 'declined') && (
           <Button disabled={busy} onClick={() => review('approved', '', t.approvedToast)}>
             <Check className="size-4" aria-hidden />
             {t.approve}
           </Button>
         )}
-        {r.status !== 'declined' && (
+        {r.status === 'offline' && (
+          <Button disabled={busy} onClick={() => review('approved', '', t.backOnlineToast)}>
+            <RotateCcw className="size-4" aria-hidden />
+            {t.putBackOnline}
+          </Button>
+        )}
+        {r.status === 'pending' && (
           <Button variant="secondary" disabled={busy} onClick={() => setDeclining(true)}>
             <X className="size-4" aria-hidden />
             {t.decline}
           </Button>
         )}
-        {r.status !== 'pending' && (
+        {r.status === 'declined' && (
           <Button variant="ghost" disabled={busy} onClick={() => review('pending', r.reviewNote, t.movedToast)}>
             <Undo2 className="size-4" aria-hidden />
             {t.moveToPending}
+          </Button>
+        )}
+        {r.status === 'approved' && (
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={async () => {
+              if (!(await confirm({ title: t.takeOffline, body: t.takeOfflineConfirm, confirmLabel: t.takeOffline }))) return;
+              await review('offline', r.reviewNote, t.offlineToast);
+            }}
+          >
+            <EyeOff className="size-4" aria-hidden />
+            {t.takeOffline}
           </Button>
         )}
         {r.status === 'approved' && (
@@ -207,13 +152,14 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
           </Link>
         )}
         <Button
-          variant="ghost"
-          className="ms-auto text-danger"
+          variant="secondary"
+          className="ms-auto border-danger/40 text-danger hover:bg-danger-soft"
           disabled={busy}
           onClick={async () => {
-            if (!(await confirm({ title: t.deleteBoard, body: t.adminDeleteConfirm, confirmLabel: t.yesDelete, danger: true }))) return;
+            if (!(await confirm({ title: t.deletePermanently, body: f('deletePermanentlyConfirm', { n: r.signupCount }), confirmLabel: t.yesDelete, danger: true }))) return;
             try {
               await api.admin.deleteBoard(r.slug);
+              toast(t.deletedToast);
               onChanged();
             } catch {
               toast(t.error, 'error');
@@ -221,7 +167,7 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
           }}
         >
           <Trash2 className="size-4" aria-hidden />
-          {t.remove}
+          {t.deletePermanently}
         </Button>
       </div>
 
@@ -396,7 +342,7 @@ export function Admin() {
   const onOtherCount = useCallback(() => {}, []);
 
   if (state.loading) return <LoadingState />;
-  if (!state.email) return <SignIn />;
+  if (!state.email) return <Navigate to="/login?next=/admin" replace />;
 
   const signOut = async () => {
     await api.admin.signOut();
@@ -421,6 +367,7 @@ export function Admin() {
     { id: 'pending', label: t.tabPending, badge: pendingCount },
     { id: 'approved', label: t.tabApproved },
     { id: 'declined', label: t.tabDeclined },
+    { id: 'offline', label: t.tabOffline },
     { id: 'admins', label: t.tabAdmins },
   ];
 
