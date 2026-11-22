@@ -112,8 +112,10 @@ time). It authenticates with a random secret kept in Supabase Vault.
 
 ## Deploy
 
-Live at https://neighborly-meal-circle.netlify.app (Netlify builds this branch; settings in
-`netlify.toml`). `npm run build` produces a static site in `dist/`. Any static host works; the
+Live at https://neighborly-meal-circle.netlify.app. Netlify publishes the `main` branch; open a pull
+request into `main` to get a preview link, and merge it to go live. `netlify.toml` holds the build
+settings and a rule (`scripts/netlify-ignore.sh`) that skips builds for changes that don't affect the
+site. `npm run build` produces a static site in `dist/`. Any static host works; the
 host must send unknown paths to `index.html` (`public/_redirects` does this on Netlify).
 
 ## Project layout

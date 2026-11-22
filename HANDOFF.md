@@ -1,8 +1,17 @@
 # Handoff: שכנות למען שכנות · Neighbors for Neighbors
 
 Status as of 2026-11-22 (afternoon). Repo `mosesar9319/Neither-Meal-Helper`, branch
-`claude/neighborly-meal-circle-redesign-ncgqq2`. **This branch is Netlify's production branch: every push deploys
-the live site.** PR #1 (Cursor's hardening work) was ported here and closed.
+`claude/neighborly-meal-circle-redesign-ncgqq2`. PR #1 (Cursor's hardening work) was ported here and closed.
+
+## How changes go live (owner's choice, 2026-11-22)
+
+- **`main` is the live branch** (Netlify production branch; switched from the claude branch once PR #2 merged).
+- Work happens on a branch, with a pull request into `main`. Netlify builds a **deploy preview** link for the pull
+  request; the owner reviews it and **merges to publish**. One merge = one production deploy.
+- **Batch pushes:** push once per finished set of changes, not after every step, and don't push docs-only changes
+  on their own. Production deploys cost Netlify credits.
+- `scripts/netlify-ignore.sh` (wired in `netlify.toml`) skips builds when a push changes nothing the site is built
+  from (docs, tests, `supabase/`), and always builds for manual redeploys or when unsure.
 
 Live site: **https://neighborly-meal-circle.netlify.app**
 
