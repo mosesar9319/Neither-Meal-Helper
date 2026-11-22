@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { Link, Outlet, ScrollRestoration } from 'react-router';
-import { Info, SearchX, UserRound } from 'lucide-react';
+import { House, Info, SearchX, UserRound } from 'lucide-react';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
@@ -46,21 +46,32 @@ export function Layout() {
           {t.demoMode}
         </div>
       )}
-      <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5 rounded-full">
-            <Logo />
-            <span className="font-display text-lg font-bold sm:text-xl">{t.appName}</span>
+      <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+          <Link to="/" className="flex min-w-0 items-center gap-2 rounded-full sm:gap-2.5">
+            <Logo className="size-8 shrink-0 sm:size-9" />
+            <span className="line-clamp-2 font-display text-[15px] leading-tight font-bold sm:text-xl">{t.appName}</span>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Link
+            to="/"
+            aria-label={t.home}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-sm font-medium hover:bg-surface-2 sm:px-3"
+          >
+            <House className="size-4 text-primary" aria-hidden />
+            <span className="hidden min-[370px]:inline sm:hidden">{t.homeShort}</span>
+            <span className="hidden sm:inline">{t.home}</span>
+          </Link>
           <AccountLink />
           <button
             type="button"
             onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
-            className="h-9 rounded-full border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-2"
+            className="h-9 rounded-full border border-line bg-surface px-3 text-sm font-medium hover:bg-surface-2 sm:px-4"
             lang={lang === 'he' ? 'en' : 'he'}
+            aria-label={t.switchLang}
           >
-            {t.switchLang}
+            <span className="sm:hidden">{lang === 'he' ? 'EN' : 'עב'}</span>
+            <span className="hidden sm:inline">{t.switchLang}</span>
           </button>
           </div>
         </div>

@@ -569,12 +569,12 @@ export function Manage() {
             onClick={() => setTab(x.id)}
             className={cx(
               'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-colors',
-              tab === x.id ? 'bg-ink text-bg' : 'text-muted hover:bg-surface-2 hover:text-ink',
+              tab === x.id ? 'bg-primary text-primary-ink shadow-card' : 'text-muted hover:bg-surface-2 hover:text-ink',
             )}
           >
             <x.icon className="size-4" aria-hidden />
             {x.label}
-            {!!x.badge && <span className={cx('rounded-full px-1.5 text-xs', tab === x.id ? 'bg-bg/20' : 'bg-surface-2')}>{x.badge}</span>}
+            {!!x.badge && <span className={cx('rounded-full px-1.5 text-xs', tab === x.id ? 'bg-white/25' : 'bg-surface-2')}>{x.badge}</span>}
           </button>
         ))}
       </div>

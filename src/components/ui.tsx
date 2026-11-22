@@ -398,7 +398,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
               key={toast.id}
               className={cx(
                 'animate-rise pointer-events-auto rounded-full px-5 py-3 text-sm font-medium shadow-2xl',
-                toast.tone === 'ok' ? 'bg-ink text-bg' : 'bg-danger text-white',
+                toast.tone === 'ok' ? 'bg-primary text-primary-ink shadow-card' : 'bg-danger text-white',
               )}
             >
               {toast.msg}
