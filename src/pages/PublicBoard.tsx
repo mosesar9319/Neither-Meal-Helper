@@ -12,7 +12,7 @@ import {
   slotDateLabel,
   useSignupForm,
 } from '../components/SignupParts';
-import { GoogleButton } from '../components/GoogleButton';
+import { LoginPanel } from '../components/LoginPanel';
 import { Button, Card, CopyField, Dialog, buttonClass, useToast } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { ApiError, api } from '../lib/api';
@@ -41,8 +41,8 @@ function SignupDialog({ data, picked, onClose, onDone }: { data: PublicBoardData
   const toast = useToast();
   const { value, setValue, errors, validate } = useSignupForm({ ...device.getContact(), dish: '', note: '' });
   const [busy, setBusy] = useState(false);
-  const { user, loading: accountLoading } = useAccount();
-  // Signed in with Google: fill in name and email if still empty.
+  const { user } = useAccount();
+  // Signed in: fill in name and email if still empty.
   useEffect(() => {
     if (user) setValue((v) => ({ ...v, name: v.name || user.name, email: v.email || user.email }));
   }, [user, setValue]);
@@ -59,7 +59,7 @@ function SignupDialog({ data, picked, onClose, onDone }: { data: PublicBoardData
       setValue((v) => ({ ...v, dish: '', note: '' }));
     } catch (e) {
       const code = e instanceof ApiError ? e.code : 'unknown';
-      toast(code === 'slot_full' ? t.slotFull : code === 'day_closed' ? t.dayClosed : t.error, 'error');
+      toast(code === 'slot_full' ? t.slotFull : code === 'day_closed' ? t.dayClosed : code === 'signin_required' ? t.signInToCook : t.error, 'error');
       if (code === 'slot_full' || code === 'day_closed') onClose();
     } finally {
       setBusy(false);
@@ -78,7 +78,7 @@ function SignupDialog({ data, picked, onClose, onDone }: { data: PublicBoardData
           className="space-y-5"
         >
           <p className="rounded-2xl bg-primary-soft px-4 py-3 font-medium text-primary">{slotDateLabel(lang, picked.slot, picked.date)}</p>
-          {api.googleEnabled && !accountLoading && !user && <GoogleButton />}
+
           <PlannedDishes signups={data.signups} />
           <SignupFields value={value} onChange={setValue} errors={errors} />
           <div className="flex justify-end">
@@ -123,6 +123,8 @@ export function PublicBoard() {
   const { data, error, loading, reload } = useAsync(() => api.getPublicBoard(slug), [slug]);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [done, setDone] = useState<Done | null>(null);
+  const { user, loading: accountLoading } = useAccount();
+  const [askSignIn, setAskSignIn] = useState(false);
   useTitle(data ? f('boardFor', { name: data.board.familyName }) : undefined);
 
   const days = useMemo(() => (data ? buildBoardDays(data.board, data.signups, todayISO()) : []), [data]);
@@ -153,7 +155,11 @@ export function PublicBoard() {
           </Card>
         </aside>
         <section aria-label={t.viewCalendar}>
-          <BoardDays board={data.board} days={days} onTake={(d: DaySlots, slot) => setPicked({ date: d.date, slot })} />
+          <BoardDays
+            board={data.board}
+            days={days}
+            onTake={(d: DaySlots, slot) => (user || accountLoading ? setPicked({ date: d.date, slot }) : setAskSignIn(true))}
+          />
         </section>
       </div>
 
@@ -171,6 +177,10 @@ export function PublicBoard() {
         }}
       />
       <ThanksDialog done={done} data={data} onClose={() => setDone(null)} />
+      <Dialog open={askSignIn} onClose={() => setAskSignIn(false)} title={t.loginTitle}>
+        <p className="mb-5 text-muted">{t.signInToCook}</p>
+        <LoginPanel next={`/b/${slug}`} />
+      </Dialog>
       <p className="mt-12 text-center text-sm text-muted">
         <Link to="/new" className="underline underline-offset-4 hover:text-ink">
           {t.startBoard}

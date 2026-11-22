@@ -5,22 +5,43 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000d1', 'dana@example.com', now()),
   ('00000000-0000-0000-0000-0000000000d2', 'yossi@example.com', now());
 
--- Anonymous request: no owner; anonymous visitors can't call the account functions.
+-- Visitors can't send requests or sign up to cook, and can't call the account functions.
 set role anon;
 do $$
-declare r jsonb;
 begin
-  r := public.meal_create_board(jsonb_build_object(
-    'familyName', 'Anon', 'startDate', current_date + 1, 'endDate', current_date + 3,
-    'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
-    'private', '{"address":"","instructions":"","phone":"","organizerEmail":""}'::jsonb));
-  perform set_config('test.anon_slug', r->>'slug', false);
-  perform set_config('test.anon_tok', r->>'manageToken', false);
+  begin
+    perform public.meal_create_board(jsonb_build_object(
+      'familyName', 'Anon', 'startDate', current_date + 1, 'endDate', current_date + 3,
+      'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
+      'private', '{"address":"","instructions":"","phone":"","organizerEmail":""}'::jsonb));
+    raise exception 'expected signin_required';
+  exception when raise_exception then assert sqlerrm = 'signin_required', sqlerrm; end;
+  begin
+    perform public.meal_sign_up('whatever', '{}'::jsonb);
+    raise exception 'expected signin_required';
+  exception when raise_exception then assert sqlerrm = 'signin_required', sqlerrm; end;
   begin
     perform public.meal_my_activity();
     raise exception 'anon could call meal_my_activity';
   exception when insufficient_privilege then null; end;
 end $$;
+
+-- A board from before sign-in was required: made by Yossi, then left without an owner.
+reset role;
+set role authenticated;
+set request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000d2"}';
+do $$
+declare r jsonb;
+begin
+  r := public.meal_create_board(jsonb_build_object(
+    'familyName', 'Legacy', 'startDate', current_date + 1, 'endDate', current_date + 3,
+    'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
+    'private', '{"address":"","instructions":"","phone":"","organizerEmail":""}'::jsonb));
+  perform set_config('test.anon_slug', r->>'slug', false);
+  perform set_config('test.anon_tok', r->>'manageToken', false);
+end $$;
+reset role;
+update public.meal_boards set created_by = null where slug = current_setting('test.anon_slug');
 
 -- Signed in as Dana: a request she sends is hers.
 reset role;

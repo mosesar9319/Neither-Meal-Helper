@@ -9,7 +9,7 @@ import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate
  * the signed-in user is a listed admin.
  */
 
-const KNOWN: ApiErrorCode[] = ['not_found', 'slot_full', 'day_closed', 'invalid', 'forbidden'];
+const KNOWN: ApiErrorCode[] = ['signin_required', 'not_found', 'slot_full', 'day_closed', 'invalid', 'forbidden'];
 
 export function createSupabaseApi(url: string, anonKey: string, emailEnabled = false, googleEnabled = false): Api {
   // Admins, and anyone who chooses Continue with Google, stay signed in.
@@ -85,6 +85,18 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
         return () => data.subscription.unsubscribe();
       },
       signInWithGoogle,
+      async requestEmailLink(email, returnTo) {
+        const { error } = await sb.auth.signInWithOtp({
+          email: email.trim().toLowerCase(),
+          options: { emailRedirectTo: returnTo, shouldCreateUser: true },
+        });
+        if (error) {
+          const msg = error.message ?? '';
+          if (error.status === 429 || /rate limit|too many/i.test(msg)) throw new ApiError('rate_limited', msg);
+          if (/signups? not allowed|signup.*disabled/i.test(msg)) throw new ApiError('signup_disabled', msg);
+          throw new ApiError('unknown', msg);
+        }
+      },
       async signOut() {
         await sb.auth.signOut();
       },

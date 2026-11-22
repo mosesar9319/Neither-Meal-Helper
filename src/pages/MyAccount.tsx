@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
-import { LogOut, UserRound } from 'lucide-react';
-import { GoogleButton } from '../components/GoogleButton';
-import { LoadingState, Page, PrivacyLink, useTitle } from '../components/Layout';
+import { Link, Navigate } from 'react-router';
+import { LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { LoadingState, Page, useTitle } from '../components/Layout';
 import { Badge, Button, Card, buttonClass } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
@@ -17,6 +16,12 @@ export function MyAccount() {
   const { loading, user } = useAccount();
   const [activity, setActivity] = useState<MyActivity | null>(null);
   const [error, setError] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    api.admin.me().then((m) => setIsAdmin(m.isAdmin), () => setIsAdmin(false));
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -27,28 +32,11 @@ export function MyAccount() {
 
   if (loading) return <LoadingState />;
 
-  if (!user) {
-    return (
-      <Page width="sm">
-        <Card className="space-y-5 p-6 sm:p-8">
-          <UserRound className="size-10 text-primary" aria-hidden />
-          <h1 className="text-3xl font-bold">{t.myTitle}</h1>
-          <p className="text-muted">{api.googleEnabled ? t.mySignedOutText : t.googleUnavailable}</p>
-          <GoogleButton returnPath="/me" />
-          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-            <Link to="/links" className="underline-offset-4 hover:underline">
-              {t.findLinks}
-            </Link>
-            <PrivacyLink />
-          </p>
-        </Card>
-      </Page>
-    );
-  }
+  if (!user) return <Navigate to="/login?next=/me" replace />;
 
   const today = todayISO();
-  const statusTone = { pending: 'primary', approved: 'accent', declined: 'warn' } as const;
-  const statusLabel = { pending: t.tabPending, approved: t.tabApproved, declined: t.tabDeclined };
+  const statusTone = { pending: 'primary', approved: 'accent', declined: 'warn', offline: 'neutral' } as const;
+  const statusLabel = { pending: t.tabPending, approved: t.tabApproved, declined: t.tabDeclined, offline: t.tabOffline };
 
   return (
     <Page width="md">
@@ -66,10 +54,18 @@ export function MyAccount() {
             <p className="text-sm text-muted">{f('signedInAs', { email: user.email })}</p>
           </div>
         </div>
+        <div className="flex flex-wrap gap-2">
+        {isAdmin && (
+          <Link to="/admin" className={buttonClass('secondary', 'sm')}>
+            <ShieldCheck className="size-4" aria-hidden />
+            {t.adminTitle}
+          </Link>
+        )}
         <Button variant="secondary" size="sm" onClick={() => api.account.signOut()}>
           <LogOut className="size-4" aria-hidden />
           {t.signOut}
         </Button>
+        </div>
       </div>
 
       {error && <p className="mb-6 text-danger">{t.error}</p>}

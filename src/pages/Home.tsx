@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Link } from 'react-router';
 import {
   ArrowLeft,
@@ -13,56 +12,11 @@ import {
   Repeat2,
   UsersRound,
 } from 'lucide-react';
-import { BoardProgress, BoardSummary } from '../components/BoardView';
 import { useTitle } from '../components/Layout';
-import { Badge, Card, LinkButton, buttonClass } from '../components/ui';
-import { addDays, formatDate, parseISO, todayISO } from '../lib/dates';
-import { api } from '../lib/api';
+import { Card, LinkButton, buttonClass } from '../components/ui';
+import { formatDate, todayISO } from '../lib/dates';
 import { device } from '../lib/device';
-import { SLOT_LABELS, useI18n } from '../lib/i18n';
-import { buildBoardDays } from '../lib/schedule';
-import { defaultDetails, type Board, type PublicSignup } from '../lib/types';
-
-function useDemoBoard() {
-  const { lang } = useI18n();
-  return useMemo(() => {
-    const start = todayISO();
-    const board: Board = {
-      slug: 'demo',
-      status: 'approved',
-      reviewNote: '',
-      familyName: lang === 'he' ? 'לוי' : 'Levi',
-      startDate: start,
-      endDate: addDays(start, 6),
-      slots: ['dinner'],
-      perSlot: 1,
-      blockedDates: [],
-      details: {
-        ...defaultDetails(),
-        organizerName: lang === 'he' ? 'שירה' : 'Shira',
-        adults: 2,
-        children: 3,
-        kashrut: 'mehadrin',
-        mealType: 'meat',
-        dietary: ['kid_friendly'],
-        allergies: lang === 'he' ? 'שומשום' : 'Sesame',
-        skipShabbat: true,
-      },
-    };
-    const names = lang === 'he' ? ['רבקה', 'דוד', 'מרים'] : ['Rivka', 'David', 'Miriam'];
-    const dishes = lang === 'he' ? ['מרק עוף ואורז', 'קציצות ופירה', 'שניצל וסלט'] : ['Chicken soup & rice', 'Meatballs & mash', 'Schnitzel & salad'];
-    const signups: PublicSignup[] = [0, 1, 3].map((offset, i) => ({
-      id: String(i),
-      date: addDays(start, offset),
-      slot: 'dinner',
-      name: names[i],
-      dish: dishes[i],
-    }));
-    // Keep the closed Shabbat honest in the preview.
-    board.blockedDates = [0, 1, 2, 3, 4, 5, 6].map((n) => addDays(start, n)).filter((d) => parseISO(d).getDay() === 6);
-    return { board, days: buildBoardDays(board, signups.filter((s) => !board.blockedDates.includes(s.date)), start) };
-  }, [lang]);
-}
+import { useI18n } from '../lib/i18n';
 
 /** A steaming pot whose steam rises into a heart. */
 function WarmPot({ className }: { className?: string }) {
@@ -79,48 +33,6 @@ function WarmPot({ className }: { className?: string }) {
       <path d="M128 100c4-10 12-14 20-14-2 8-8 14-20 14z" fill="var(--accent)" opacity="0.55" />
       <path d="M30 102c-3-8-10-12-17-12 2 7 7 12 17 12z" fill="var(--accent)" opacity="0.45" />
     </svg>
-  );
-}
-
-function Preview() {
-  const { t, f, lang } = useI18n();
-  const { board, days } = useDemoBoard();
-  return (
-    <Card className="relative overflow-hidden p-5 sm:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Badge tone="primary">{t.previewLabel}</Badge>
-        <span className="text-xs text-muted">{board.details.organizerName && f('organizedBy', { name: board.details.organizerName })}</span>
-      </div>
-      <h3 className="mb-3 text-2xl font-bold">{f('boardFor', { name: board.familyName })}</h3>
-      <div className="pointer-events-none space-y-4" aria-hidden>
-        <BoardSummary board={{ ...board, details: { ...board.details, organizerName: '' } }} />
-        <BoardProgress days={days} />
-        <ul className="space-y-2">
-          {days.slice(0, 4).map((d) => {
-            const s = d.slots[0];
-            const taken = s.signups[0];
-            return (
-              <li key={d.date} className="flex items-center gap-3 rounded-2xl bg-surface-2/70 px-3 py-2.5 text-sm">
-                <span className="w-20 shrink-0 font-semibold">
-                  {formatDate(d.date, lang, 'weekday')} {parseISO(d.date).getDate()}
-                </span>
-                {d.blocked ? (
-                  <span className="text-muted">
-                    {t.closed} · {t.shabbat}
-                  </span>
-                ) : taken ? (
-                  <span className="truncate text-accent">
-                    <strong className="font-medium">{taken.name}</strong> · {taken.dish}
-                  </span>
-                ) : (
-                  <span className={buttonClass('primary', 'sm', 'ms-auto')}>+ {SLOT_LABELS[lang].dinner}</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </Card>
   );
 }
 
@@ -144,7 +56,7 @@ export function Home() {
     { icon: UsersRound, title: t.f6Title, text: t.f6 },
   ];
   const faqs = [
-    [t.q1, api.googleEnabled ? `${t.a1} ${t.a1Google}` : t.a1],
+    [t.q1, t.a1],
     [t.q2, t.a2],
     [t.q3, t.a3],
     [t.q5, t.a5],
@@ -157,13 +69,13 @@ export function Home() {
       <section className="relative overflow-hidden bg-gradient-to-b from-peach-soft via-bg to-bg">
         <div aria-hidden className="pointer-events-none absolute -top-32 -start-24 size-[28rem] rounded-full bg-primary-soft blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute top-24 -end-32 size-[24rem] rounded-full bg-peach-soft blur-3xl" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 pt-8 pb-16 sm:px-6 sm:pt-14 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:pt-20 lg:pb-24">
+        <div className="relative mx-auto max-w-3xl px-4 pt-10 pb-16 text-center sm:px-6 sm:pt-16 lg:pt-20 lg:pb-24">
           <div className="animate-rise">
-            <WarmPot className="mb-4 h-24 w-auto sm:h-28" />
+            <WarmPot className="mx-auto mb-4 h-24 w-auto sm:h-32" />
             <h1 className="mb-3 text-4xl font-bold tracking-tight text-ink sm:text-5xl lg:text-6xl">{t.heroTitle}</h1>
-            <p className="mb-4 max-w-xl text-xl leading-snug font-medium text-primary sm:text-2xl">{t.heroSubtitle}</p>
-            <p className="mb-8 max-w-xl text-lg text-muted">{t.heroText}</p>
-            <div className="flex flex-wrap items-center gap-3">
+            <p className="mx-auto mb-4 max-w-2xl text-xl leading-snug font-medium text-primary sm:text-2xl">{t.heroSubtitle}</p>
+            <p className="mx-auto mb-8 max-w-xl text-lg text-muted">{t.heroText}</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <LinkButton to="/new" size="lg">
                 {t.startBoard}
                 <Arrow className="size-5" aria-hidden />
@@ -173,9 +85,6 @@ export function Home() {
                 <ChevronDown className="size-5" aria-hidden />
               </a>
             </div>
-          </div>
-          <div className="animate-rise [animation-delay:80ms]">
-            <Preview />
           </div>
         </div>
       </section>
