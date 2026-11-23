@@ -17,7 +17,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import { FamilySection, FoodSection, PrivateSection, ScheduleSection, validateBoard, type Errors } from '../components/BoardForm';
+import { CalendarLockedNote, FamilySection, FoodSection, PrivateSection, ScheduleSection, validateBoard, type Errors } from '../components/BoardForm';
 import { BoardProgress } from '../components/BoardView';
 import { ClosableCalendar } from '../components/Calendar';
 import { LoadingState, NotFoundState, Page, useTitle } from '../components/Layout';
@@ -37,6 +37,9 @@ function toInput(d: ManageData): BoardInput {
   const b = d.board;
   return { familyName: b.familyName, startDate: b.startDate, endDate: b.endDate, slots: b.slots, perSlot: b.perSlot, details: b.details, private: d.private };
 }
+
+/** Once a request is sent, only admins change its dates and days. A declined request can be fixed and resent. */
+const calendarLocked = (d: ManageData) => d.board.status !== 'declined';
 
 function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
@@ -310,6 +313,15 @@ function Days({ data, token, reload }: { data: ManageData; token: string; reload
   const [busy, setBusy] = useState(false);
   const days = useMemo(() => computeDays(draft), [draft]);
   const dirty = JSON.stringify(draft.details) !== JSON.stringify(data.board.details);
+  if (calendarLocked(data)) {
+    return (
+      <Card className="space-y-5 p-5 sm:p-6">
+        <h2 className="text-2xl font-bold">{t.tabDays}</h2>
+        <CalendarLockedNote value={draft} />
+        <ClosableCalendar days={days} />
+      </Card>
+    );
+  }
   return (
     <Card className="p-5 sm:p-6">
       <SectionTitle
@@ -353,7 +365,10 @@ function Details({ data, token, reload }: { data: ManageData; token: string; rel
   const sections = [
     { title: t.stepFamily, body: <FamilySection value={value} onChange={setValue} errors={errors} /> },
     { title: t.stepFood, body: <FoodSection value={value} onChange={setValue} /> },
-    { title: t.stepSchedule, body: <ScheduleSection value={value} onChange={setValue} errors={errors} showCalendar={false} /> },
+    {
+      title: t.stepSchedule,
+      body: <ScheduleSection value={value} onChange={setValue} errors={errors} showCalendar={false} calendarLocked={calendarLocked(data)} />,
+    },
     { title: t.stepPrivate, body: <PrivateSection value={value} onChange={setValue} /> },
   ];
   return (

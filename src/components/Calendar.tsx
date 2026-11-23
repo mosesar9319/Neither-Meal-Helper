@@ -107,8 +107,8 @@ export function DayNumber({ day, muted }: { day: DayInfo; muted?: boolean }) {
   );
 }
 
-/** Calendar the organizer taps to close or reopen days (wizard + manage page). */
-export function ClosableCalendar({ days, onToggle }: { days: DayInfo[]; onToggle: (d: DayInfo) => void }) {
+/** Calendar you tap to close or reopen days (request form, admin page). Without onToggle it is read-only. */
+export function ClosableCalendar({ days, onToggle }: { days: DayInfo[]; onToggle?: (d: DayInfo) => void }) {
   const { lang, t } = useI18n();
   return (
     <CalendarGrid

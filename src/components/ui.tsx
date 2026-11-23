@@ -9,6 +9,7 @@ import {
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
 import { Link, type LinkProps } from 'react-router';
@@ -122,6 +123,10 @@ export function TextInput({ invalid, className, ...props }: InputHTMLAttributes<
       {...props}
     />
   );
+}
+
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cx(inputBase, 'h-11', className)} {...props} />;
 }
 
 export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

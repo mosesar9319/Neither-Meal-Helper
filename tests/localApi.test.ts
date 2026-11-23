@@ -82,6 +82,55 @@ describe('local demo API', () => {
     expect(await code(localApi.getPublicBoard(slug))).toBe('not_found');
   });
 
+  it('lets admins move and remove sign-ups', async () => {
+    const { slug } = await localApi.createBoard(input());
+    await localApi.admin.review(slug, 'approved', '');
+    const a = await localApi.signUp(slug, { ...contact, date: start, slot: 'dinner' });
+    await localApi.signUp(slug, { ...contact, date: addDays(start, 1), slot: 'dinner' });
+
+    const list = await localApi.admin.listSignups(slug);
+    expect(list.map((s) => s.date)).toEqual([start, addDays(start, 1)]);
+    expect(list[0].phone).toBe('052');
+    expect(JSON.stringify(list)).not.toContain(a.editToken);
+
+    await localApi.admin.moveSignup(a.signupId, addDays(start, 3), 'lunch', false);
+    expect((await localApi.admin.listSignups(slug)).find((s) => s.id === a.signupId)).toMatchObject({ date: addDays(start, 3), slot: 'lunch' });
+    expect(await code(localApi.admin.moveSignup(a.signupId, addDays(start, 1), 'dinner', false))).toBe('slot_full');
+    expect(await code(localApi.admin.moveSignup(a.signupId, addDays(start, 1), 'dinner', true))).toBe('ok');
+    expect(await code(localApi.admin.moveSignup(a.signupId, addDays(start, 30), 'dinner', true))).toBe('invalid');
+    expect(await code(localApi.admin.moveSignup(a.signupId, start, 'breakfast', true))).toBe('invalid');
+
+    await localApi.admin.removeSignup(a.signupId);
+    expect(await localApi.admin.listSignups(slug)).toHaveLength(1);
+    expect(await code(localApi.admin.removeSignup(a.signupId))).toBe('not_found');
+  });
+
+  it('keeps the calendar for admins once a request is sent', async () => {
+    const { slug, manageToken } = await localApi.createBoard(input());
+    const later = { ...input(), familyName: 'Cohen family', endDate: addDays(start, 9), details: { ...input().details, manualBlocked: [] } };
+
+    // Pending: other details change, the dates and closed days don't.
+    await localApi.updateBoard(manageToken, later);
+    let b = (await localApi.getManage(manageToken)).board;
+    expect(b.familyName).toBe('Cohen family');
+    expect(b.endDate).toBe(addDays(start, 6));
+    expect(b.blockedDates).toEqual([addDays(start, 2)]);
+
+    // Declined: the organizer may change them again.
+    await localApi.admin.review(slug, 'declined', 'dates');
+    await localApi.updateBoard(manageToken, later);
+    b = (await localApi.getManage(manageToken)).board;
+    expect(b.endDate).toBe(addDays(start, 9));
+    expect(b.blockedDates).toEqual([]);
+
+    // Admins can always change them.
+    await localApi.admin.updateCalendar(slug, { ...later, endDate: addDays(start, 4), details: { ...later.details, manualBlocked: [addDays(start, 1)] } });
+    b = (await localApi.getManage(manageToken)).board;
+    expect(b.endDate).toBe(addDays(start, 4));
+    expect(b.blockedDates).toEqual([addDays(start, 1)]);
+    expect(b.familyName).toBe('Cohen family');
+  });
+
   it('rejects bad boards', async () => {
     expect(await code(localApi.createBoard({ ...input(), familyName: ' ' }))).toBe('invalid');
     expect(await code(localApi.createBoard({ ...input(), endDate: addDays(start, -1) }))).toBe('invalid');

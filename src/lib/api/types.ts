@@ -4,11 +4,13 @@ import type {
   AdminRequest,
   BoardInput,
   BoardStatus,
+  MealSlot,
   MyActivity,
   ManageData,
   MySignupData,
   PublicBoardData,
   SignUpResult,
+  Signup,
   SignupInput,
 } from '../types';
 
@@ -61,6 +63,14 @@ export interface AdminApi {
   listRequests(status: BoardStatus): Promise<AdminRequest[]>;
   review(slug: string, status: BoardStatus, note: string): Promise<void>;
   deleteBoard(slug: string): Promise<void>;
+  /** All sign-ups of a board, with contact details. */
+  listSignups(slug: string): Promise<Signup[]>;
+  /** Moves a sign-up to another day/meal of its board. A full meal gives 'slot_full' unless force. No email is sent. */
+  moveSignup(id: string, date: string, slot: MealSlot, force: boolean): Promise<void>;
+  /** Removes a person's sign-up. No email is sent. */
+  removeSignup(id: string): Promise<void>;
+  /** Changes a board's dates and open/closed days (only those parts of the input are used). No email is sent. */
+  updateCalendar(slug: string, input: BoardInput): Promise<void>;
   listAdmins(): Promise<AdminEntry[]>;
   addAdmin(email: string): Promise<void>;
   removeAdmin(email: string): Promise<void>;

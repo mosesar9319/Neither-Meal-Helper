@@ -15,6 +15,33 @@ Status as of 2026-11-22 (afternoon). Repo `mosesar9319/Neither-Meal-Helper`, bra
 
 Live site: **https://neighborly-meal-circle.netlify.app**
 
+## Admins edit who cooks when (2026-11-23)
+
+- On `/admin`, each board has a "הרשמות (N)" section listing every sign-up (day, meal, name, phone, dish) with
+  "העברה ליום אחר" (move to another day/meal of the same board) and "הסרה" (remove).
+- **Admins only, and no emails** (owner's choice): organizers' pages are unchanged, and the cook isn't emailed
+  about a move or removal; the toast reminds the admin to tell them. A moved sign-up's reminder is reset so it
+  goes out the evening before the new day.
+- Moving into a full meal shows a warning and "להעביר בכל זאת" (move anyway); closed days are labeled but allowed.
+- Migration `20261123000000_admin_edit_signups.sql` (`meal_admin_list_signups`, `meal_admin_move_signup`,
+  `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
+  `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
+
+## Calendar belongs to admins once a request is sent (2026-11-23)
+
+- Organizers choose the dates and open/closed days when they send a request. After that only admins change them:
+  "עריכת תאריכים וימים" on each board on `/admin` (dates, Shabbat/holiday switches, tap a day to close/reopen).
+  If the request is **declined**, the organizer may change the calendar again and resend it.
+- The organizer page shows the calendar read-only with a note to contact the admins; other details (food,
+  meals per day, delivery times, address) stay editable.
+- Closing days or shortening the dates keeps people already signed up; the dialog warns and names the people
+  newly affected, and the admin sign-up list marks anyone on a closed day ("מחוץ לתאריכים הנוכחיים או ביום סגור").
+  No emails.
+- Migrations: `20261123010000_admin_calendar.sql` (`meal_admin_update_calendar`, **applied live**) and
+  `20261123020000_organizer_calendar_lock.sql` (organizers' `meal_update_board` keeps the calendar unless declined).
+  **Apply the lock migration when the PR merges**, not before: until then the live organizer page still shows the
+  calendar editor. Tests: `tests/sql/admin_calendar.test.sql`, `tests/localApi.test.ts`.
+
 ## Sign-in, take offline, delete (2026-11-22, PR #4)
 
 - **One sign-in page for everyone** at `/login` (Google or an emailed link; `?next=` returns people where they

@@ -1,7 +1,7 @@
 import { todayISO } from '../dates';
 import type { AdminEntry, AdminRequest, Board, Manager, OrganizerPrivate, Signup, SignupInput } from '../types';
 import { ApiError, type Api, type SignupEdit } from './types';
-import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
+import { calendarPart, normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
 
 /**
  * Demo mode: the same rules as the Supabase functions, kept in this browser.
@@ -188,18 +188,20 @@ export const localApi: Api = {
     const db = load();
     const { row } = byManager(db, token);
     const clean = normalizeBoard(input);
+    // Once a request is sent, its calendar is the admins' (unless it was declined).
+    const cal = row.board.status === 'declined' ? calendarPart(clean) : calendarPart(row.board);
     row.board = {
       slug: row.board.slug,
       // Editing a declined request sends it back for review.
       status: row.board.status === 'declined' ? 'pending' : row.board.status,
       reviewNote: row.board.reviewNote,
       familyName: clean.familyName,
-      startDate: clean.startDate,
-      endDate: clean.endDate,
+      startDate: cal.startDate,
+      endDate: cal.endDate,
       slots: clean.slots,
       perSlot: clean.perSlot,
-      blockedDates: clean.blockedDates,
-      details: clean.details,
+      blockedDates: cal.blockedDates,
+      details: { ...clean.details, ...cal.details },
     };
     row.private = clean.private;
     save(db);
@@ -325,6 +327,42 @@ export const localApi: Api = {
       const before = db.boards.length;
       db.boards = db.boards.filter((r) => r.board.slug !== slug);
       if (db.boards.length === before) throw new ApiError('not_found');
+      save(db);
+    },
+    async listSignups(slug) {
+      const row = load().boards.find((r) => r.board.slug === slug);
+      if (!row) throw new ApiError('not_found');
+      return row.signups
+        .map((s) => strip(s, 'editToken'))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot) || a.createdAt.localeCompare(b.createdAt));
+    },
+    async moveSignup(id, date, slot, force) {
+      const db = load();
+      const row = db.boards.find((r) => r.signups.some((s) => s.id === id));
+      const s = row?.signups.find((x) => x.id === id);
+      if (!row || !s) throw new ApiError('not_found');
+      const b = row.board;
+      if (date < b.startDate || date > b.endDate || !b.slots.includes(slot)) throw new ApiError('invalid');
+      if (s.date === date && s.slot === slot) return;
+      const taken = row.signups.filter((x) => x.date === date && x.slot === slot && x.id !== id).length;
+      if (!force && taken >= b.perSlot) throw new ApiError('slot_full');
+      s.date = date;
+      s.slot = slot;
+      save(db);
+    },
+    async removeSignup(id) {
+      const db = load();
+      const row = db.boards.find((r) => r.signups.some((s) => s.id === id));
+      if (!row) throw new ApiError('not_found');
+      row.signups = row.signups.filter((s) => s.id !== id);
+      save(db);
+    },
+    async updateCalendar(slug, input) {
+      const db = load();
+      const row = db.boards.find((r) => r.board.slug === slug);
+      if (!row) throw new ApiError('not_found');
+      const cal = calendarPart(normalizeBoard(input));
+      row.board = { ...row.board, startDate: cal.startDate, endDate: cal.endDate, blockedDates: cal.blockedDates, details: { ...row.board.details, ...cal.details } };
       save(db);
     },
     async listAdmins() {
