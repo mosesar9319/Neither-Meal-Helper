@@ -27,6 +27,15 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
   `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
 
+## All meals in one place (2026-11-23)
+
+- `/admin` has a "כל הארוחות" (All meals) tab: every meal on approved boards, grouped by day from today
+  ("היום"/"מחר" marked), each with the family (links to the board), the cook's name, phone and email (tap to
+  call or write), and the dish. Search by family, cook, phone, email or dish; a switch shows past meals too.
+  "העברה ליום אחר" and "הסרה" work here as on each board. Emails are only shown, never sent automatically.
+- Migration `20261123030000_admin_all_meals.sql` (`meal_admin_list_meals`, admin-only, read-only) is
+  **applied live**. Tests: `tests/sql/admin_meals.test.sql`, `tests/localApi.test.ts`.
+
 ## Calendar belongs to admins once a request is sent (2026-11-23)
 
 - Organizers choose the dates and open/closed days when they send a request. After that only admins change them:

@@ -129,6 +129,11 @@ export interface AdminRequest extends Board {
   signupCount: number;
 }
 
+/** One meal someone signed up to cook, with its board, for the admins' "all meals" list. */
+export interface AdminMeal extends Signup {
+  board: Omit<Board, 'status' | 'reviewNote'>;
+}
+
 /** The signed-in person (Continue with Google). */
 export interface AccountUser {
   email: string;

@@ -357,6 +357,17 @@ export const localApi: Api = {
       row.signups = row.signups.filter((s) => s.id !== id);
       save(db);
     },
+    async listMeals(includePast) {
+      const today = todayISO();
+      const order = { breakfast: 0, lunch: 1, dinner: 2 };
+      return load()
+        .boards.filter((r) => r.board.status === 'approved')
+        .flatMap((r) => {
+          const board = strip(r.board, 'status', 'reviewNote');
+          return r.signups.filter((s) => includePast || s.date >= today).map((s) => ({ ...strip(s, 'editToken'), board }));
+        })
+        .sort((a, b) => a.date.localeCompare(b.date) || order[a.slot] - order[b.slot] || a.createdAt.localeCompare(b.createdAt));
+    },
     async updateCalendar(slug, input) {
       const db = load();
       const row = db.boards.find((r) => r.board.slug === slug);

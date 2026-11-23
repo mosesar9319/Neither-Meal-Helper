@@ -131,6 +131,26 @@ describe('local demo API', () => {
     expect(b.familyName).toBe('Cohen family');
   });
 
+  it('lists every meal on approved boards for admins, in date order', async () => {
+    const a = await localApi.createBoard(input());
+    const b = await localApi.createBoard({ ...input(), familyName: 'Levi' });
+    await localApi.createBoard({ ...input(), familyName: 'Pending' });
+    await localApi.admin.review(a.slug, 'approved', '');
+    await localApi.admin.review(b.slug, 'approved', '');
+    await localApi.signUp(a.slug, { ...contact, date: addDays(start, 1), slot: 'dinner' });
+    await localApi.signUp(b.slug, { ...contact, date: start, slot: 'dinner' });
+    await localApi.signUp(a.slug, { ...contact, date: addDays(start, 1), slot: 'lunch' });
+
+    const meals = await localApi.admin.listMeals(false);
+    expect(meals.map((m) => [m.board.familyName, m.date, m.slot])).toEqual([
+      ['Levi', start, 'dinner'],
+      ['Cohen', addDays(start, 1), 'lunch'],
+      ['Cohen', addDays(start, 1), 'dinner'],
+    ]);
+    expect(meals[0].email).toBe('rivka@example.com');
+    expect(JSON.stringify(meals)).not.toContain('editToken');
+  });
+
   it('rejects bad boards', async () => {
     expect(await code(localApi.createBoard({ ...input(), familyName: ' ' }))).toBe('invalid');
     expect(await code(localApi.createBoard({ ...input(), endDate: addDays(start, -1) }))).toBe('invalid');
