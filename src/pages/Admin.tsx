@@ -1,16 +1,240 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router';
-import { Check, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserPlus, X } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { BoardSummary } from '../components/BoardView';
 import { LoadingState, Page, useTitle } from '../components/Layout';
-import { Badge, Button, Card, Dialog, Field, Spinner, TextArea, TextInput, buttonClass, cx, useConfirm, useToast } from '../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  Field,
+  Segmented,
+  Select,
+  Spinner,
+  TextArea,
+  TextInput,
+  buttonClass,
+  cx,
+  useConfirm,
+  useToast,
+} from '../components/ui';
 import { ApiError, api } from '../lib/api';
 import { formatDate, formatRange } from '../lib/dates';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { computeDays } from '../lib/schedule';
-import type { AdminEntry, AdminRequest, BoardStatus } from '../lib/types';
+import type { AdminEntry, AdminRequest, BoardStatus, MealSlot, Signup } from '../lib/types';
 
 type Tab = BoardStatus | 'admins';
+
+// ---------------------------------------------------------------- who cooks when (admins can move or remove)
+
+function MoveDialog({ r, s, list, onClose, onMoved }: { r: AdminRequest; s: Signup; list: Signup[]; onClose: () => void; onMoved: () => void }) {
+  const { t, f, lang } = useI18n();
+  const toast = useToast();
+  const [date, setDate] = useState(s.date);
+  const [slot, setSlot] = useState<MealSlot>(s.slot);
+  const [full, setFull] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const days = computeDays(r);
+  const closed = new Set(r.blockedDates);
+  const taken = list.filter((x) => x.date === date && x.slot === slot && x.id !== s.id).length;
+  const same = date === s.date && slot === s.slot;
+
+  const move = async (force: boolean) => {
+    setBusy(true);
+    try {
+      await api.admin.moveSignup(s.id, date, slot, force);
+      toast(t.movedSignupToast);
+      onMoved();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'slot_full') setFull(true);
+      else toast(t.error, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open onClose={onClose} title={f('moveTitle', { name: s.name })}>
+      <form
+        className="space-y-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!same) void move(full);
+        }}
+      >
+        <Field id={`move-day-${s.id}`} label={t.moveDay}>
+          <Select
+            id={`move-day-${s.id}`}
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setFull(false);
+            }}
+          >
+            {days.map((d) => (
+              <option key={d.date} value={d.date}>
+                {formatDate(d.date, lang)}
+                {closed.has(d.date) ? ` (${t.closed})` : ''}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t.moveMeal}</p>
+          <Segmented
+            label={t.moveMeal}
+            value={slot}
+            options={r.slots.map((x) => ({ value: x, label: SLOT_LABELS[lang][x] }))}
+            onChange={(v) => {
+              setSlot(v);
+              setFull(false);
+            }}
+          />
+          <p className="text-sm text-muted">{same ? t.sameSpot : f('placesTaken', { taken, max: r.perSlot })}</p>
+        </div>
+        {full && (
+          <p role="alert" className="rounded-2xl bg-warn-soft px-4 py-3 text-sm text-warn">
+            {f('moveFullWarn', { taken, max: r.perSlot })}
+          </p>
+        )}
+        <p className="text-sm text-muted">{t.noEmailNote}</p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" disabled={busy || same}>
+            {busy && <Spinner />}
+            {full ? t.moveAnyway : t.moveSubmit}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function SignupsSection({ r, onChanged }: { r: AdminRequest; onChanged: () => void }) {
+  const { t, f, lang } = useI18n();
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [open, setOpen] = useState(false);
+  const [list, setList] = useState<Signup[] | null>(null);
+  const [moving, setMoving] = useState<Signup | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setList(await api.admin.listSignups(r.slug));
+    } catch {
+      toast(t.error, 'error');
+    }
+  }, [r.slug, t.error, toast]);
+  useEffect(() => {
+    if (open) void load();
+  }, [open, load]);
+
+  const changed = () => {
+    void load();
+    onChanged();
+  };
+
+  return (
+    <div className="rounded-2xl border border-line">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-start font-medium hover:bg-surface-2/60"
+      >
+        <span className="flex items-center gap-2">
+          <Users className="size-4 text-primary" aria-hidden />
+          {f('signupsTitle', { n: r.signupCount })}
+        </span>
+        <span className="flex items-center gap-1 text-sm text-muted">
+          {open ? t.hideSignups : t.showSignups}
+          <ChevronDown className={cx('size-4 transition-transform', open && 'rotate-180')} aria-hidden />
+        </span>
+      </button>
+      {open && (
+        <div className="border-t border-line px-4 py-3">
+          {!list ? (
+            <div className="py-4 text-center">
+              <Spinner />
+            </div>
+          ) : list.length === 0 ? (
+            <p className="py-2 text-muted">{t.noSignupsYet}</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {list.map((s) => (
+                <li key={s.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {formatDate(s.date, lang)} · {SLOT_LABELS[lang][s.slot]}
+                    </p>
+                    <p className="text-[15px]">
+                      {s.name}
+                      {s.phone && (
+                        <>
+                          {' · '}
+                          <a href={`tel:${s.phone}`} dir="ltr" className="underline underline-offset-4">
+                            {s.phone}
+                          </a>
+                        </>
+                      )}
+                    </p>
+                    {s.dish && <p className="text-sm text-muted">{s.dish}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setMoving(s)}>
+                      <CalendarClock className="size-4" aria-hidden />
+                      {t.moveSignup}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-danger"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t.remove,
+                          body: f('removeSignupConfirm', { name: s.name, date: formatDate(s.date, lang) }),
+                          confirmLabel: t.remove,
+                          danger: true,
+                        });
+                        if (!ok) return;
+                        try {
+                          await api.admin.removeSignup(s.id);
+                          toast(t.removedSignupToast);
+                          changed();
+                        } catch {
+                          toast(t.error, 'error');
+                        }
+                      }}
+                    >
+                      <UserMinus className="size-4" aria-hidden />
+                      {t.remove}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {moving && list && (
+        <MoveDialog
+          r={r}
+          s={moving}
+          list={list}
+          onClose={() => setMoving(null)}
+          onMoved={() => {
+            setMoving(null);
+            changed();
+          }}
+        />
+      )}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------- one request
 
@@ -94,6 +318,8 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
           {r.private.instructions && <dd className="mt-1 text-sm whitespace-pre-line text-muted">{r.private.instructions}</dd>}
         </div>
       </dl>
+
+      {(r.status === 'approved' || r.status === 'offline' || r.signupCount > 0) && <SignupsSection r={r} onChanged={onChanged} />}
 
       {r.reviewNote && r.status !== 'approved' && (
         <p className="rounded-2xl bg-warn-soft px-4 py-3 text-sm text-warn">

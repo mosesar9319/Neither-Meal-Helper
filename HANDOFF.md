@@ -15,6 +15,18 @@ Status as of 2026-11-22 (afternoon). Repo `mosesar9319/Neither-Meal-Helper`, bra
 
 Live site: **https://neighborly-meal-circle.netlify.app**
 
+## Admins edit who cooks when (2026-11-23)
+
+- On `/admin`, each board has a "הרשמות (N)" section listing every sign-up (day, meal, name, phone, dish) with
+  "העברה ליום אחר" (move to another day/meal of the same board) and "הסרה" (remove).
+- **Admins only, and no emails** (owner's choice): organizers' pages are unchanged, and the cook isn't emailed
+  about a move or removal; the toast reminds the admin to tell them. A moved sign-up's reminder is reset so it
+  goes out the evening before the new day.
+- Moving into a full meal shows a warning and "להעביר בכל זאת" (move anyway); closed days are labeled but allowed.
+- Migration `20261123000000_admin_edit_signups.sql` (`meal_admin_list_signups`, `meal_admin_move_signup`,
+  `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
+  `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
+
 ## Sign-in, take offline, delete (2026-11-22, PR #4)
 
 - **One sign-in page for everyone** at `/login` (Google or an emailed link; `?next=` returns people where they

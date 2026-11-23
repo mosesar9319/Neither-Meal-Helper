@@ -327,6 +327,34 @@ export const localApi: Api = {
       if (db.boards.length === before) throw new ApiError('not_found');
       save(db);
     },
+    async listSignups(slug) {
+      const row = load().boards.find((r) => r.board.slug === slug);
+      if (!row) throw new ApiError('not_found');
+      return row.signups
+        .map((s) => strip(s, 'editToken'))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot) || a.createdAt.localeCompare(b.createdAt));
+    },
+    async moveSignup(id, date, slot, force) {
+      const db = load();
+      const row = db.boards.find((r) => r.signups.some((s) => s.id === id));
+      const s = row?.signups.find((x) => x.id === id);
+      if (!row || !s) throw new ApiError('not_found');
+      const b = row.board;
+      if (date < b.startDate || date > b.endDate || !b.slots.includes(slot)) throw new ApiError('invalid');
+      if (s.date === date && s.slot === slot) return;
+      const taken = row.signups.filter((x) => x.date === date && x.slot === slot && x.id !== id).length;
+      if (!force && taken >= b.perSlot) throw new ApiError('slot_full');
+      s.date = date;
+      s.slot = slot;
+      save(db);
+    },
+    async removeSignup(id) {
+      const db = load();
+      const row = db.boards.find((r) => r.signups.some((s) => s.id === id));
+      if (!row) throw new ApiError('not_found');
+      row.signups = row.signups.filter((s) => s.id !== id);
+      save(db);
+    },
     async listAdmins() {
       const db = load();
       return db.admins?.length ? db.admins : [{ email: DEMO_ADMIN, addedBy: '', createdAt: now() }];
