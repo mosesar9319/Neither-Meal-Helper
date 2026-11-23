@@ -39,8 +39,7 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   No emails.
 - Migrations: `20261123010000_admin_calendar.sql` (`meal_admin_update_calendar`, **applied live**) and
   `20261123020000_organizer_calendar_lock.sql` (organizers' `meal_update_board` keeps the calendar unless declined).
-  **Apply the lock migration when the PR merges**, not before: until then the live organizer page still shows the
-  calendar editor. Tests: `tests/sql/admin_calendar.test.sql`, `tests/localApi.test.ts`.
+  Both **applied live** (the lock right after PR #5 merged). Tests: `tests/sql/admin_calendar.test.sql`, `tests/localApi.test.ts`.
 
 ## Sign-in, take offline, delete (2026-11-22, PR #4)
 
