@@ -63,6 +63,17 @@ export function normalizeBoard(input: BoardInput): BoardInput & { blockedDates: 
   return { ...clean, blockedDates: computeBlockedDates(clean) };
 }
 
+/** The calendar part of a cleaned board: dates and which days are open. Mirrors meal_private.calendar_keys(). */
+export function calendarPart(b: Pick<BoardInput, 'startDate' | 'endDate' | 'details'> & { blockedDates: string[] }) {
+  const d = b.details;
+  return {
+    startDate: b.startDate,
+    endDate: b.endDate,
+    blockedDates: b.blockedDates,
+    details: { skipShabbat: d.skipShabbat, skipHolidays: d.skipHolidays, inIsrael: d.inIsrael, manualBlocked: d.manualBlocked, manualOpen: d.manualOpen },
+  };
+}
+
 export const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
 
 export function normalizeSignupEdit(e: SignupEdit): SignupEdit {

@@ -69,6 +69,8 @@ export interface AdminApi {
   moveSignup(id: string, date: string, slot: MealSlot, force: boolean): Promise<void>;
   /** Removes a person's sign-up. No email is sent. */
   removeSignup(id: string): Promise<void>;
+  /** Changes a board's dates and open/closed days (only those parts of the input are used). No email is sent. */
+  updateCalendar(slug: string, input: BoardInput): Promise<void>;
   listAdmins(): Promise<AdminEntry[]>;
   addAdmin(email: string): Promise<void>;
   removeAdmin(email: string): Promise<void>;

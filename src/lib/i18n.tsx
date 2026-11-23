@@ -345,6 +345,13 @@ const en = {
   removeSignupConfirm: 'Remove {name} from {date}? No email is sent, so let them know.',
   removedSignupToast: 'Removed',
   noEmailNote: 'Changes here don’t send emails.',
+  // Calendar: organizers choose it when sending; after that it is the admins'
+  calendarLocked: 'Your request was sent, so only the site’s admins can change the dates and days. To change them, contact the admins.',
+  editCalendar: 'Edit dates and days',
+  editCalendarHint: 'Change the dates, or tap a day to close or reopen it. No emails are sent.',
+  calendarSaved: 'Saved. No email was sent.',
+  calendarAffects: 'These sign-ups are on days that will be closed or outside the new dates. They are kept and no one is emailed; you can move or remove them afterwards:',
+  saveAnyway: 'Save anyway',
   statusOfflineTitle: 'This board was taken offline',
   statusOfflineText: 'The site’s administrators took this board offline, so neighbors can’t see it or sign up. Contact them if you think this is a mistake.',
 
@@ -700,6 +707,12 @@ const he: Dict = {
   removeSignupConfirm: 'להסיר את {name} מ־{date}? לא יישלח מייל, כדאי לעדכן אותם.',
   removedSignupToast: 'ההרשמה הוסרה',
   noEmailNote: 'שינויים כאן לא שולחים מיילים.',
+  calendarLocked: 'הבקשה נשלחה, ולכן רק מנהלי האתר יכולים לשנות את התאריכים והימים. כדי לשנות אותם, פנו למנהלים.',
+  editCalendar: 'עריכת תאריכים וימים',
+  editCalendarHint: 'אפשר לשנות את התאריכים, או להקיש על יום כדי לסגור או לפתוח אותו. לא נשלחים מיילים.',
+  calendarSaved: 'נשמר. לא נשלח מייל.',
+  calendarAffects: 'ההרשמות האלה נמצאות בימים שייסגרו או מחוץ לתאריכים החדשים. הן נשמרות ולא נשלח מייל, ואפשר להעביר או להסיר אותן אחר כך:',
+  saveAnyway: 'לשמור בכל זאת',
   statusOfflineTitle: 'הלוח הוסר מהאתר',
   statusOfflineText: 'מנהלי האתר הסירו את הלוח, כך שהשכנות לא רואות אותו ולא יכולות להירשם. אם נראה לך שזו טעות, פנו אליהם.',
 

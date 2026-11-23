@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router';
-import { CalendarClock, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { CalendarClock, CalendarDays, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { DatesFields, DaysFields, validateBoard, type Errors } from '../components/BoardForm';
 import { BoardSummary } from '../components/BoardView';
 import { LoadingState, Page, useTitle } from '../components/Layout';
 import {
@@ -20,12 +21,109 @@ import {
   useToast,
 } from '../components/ui';
 import { ApiError, api } from '../lib/api';
-import { formatDate, formatRange } from '../lib/dates';
+import { formatDate, formatRange, todayISO } from '../lib/dates';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
-import { computeDays } from '../lib/schedule';
-import type { AdminEntry, AdminRequest, BoardStatus, MealSlot, Signup } from '../lib/types';
+import { computeBlockedDates, computeDays } from '../lib/schedule';
+import type { AdminEntry, AdminRequest, BoardInput, BoardStatus, MealSlot, Signup } from '../lib/types';
 
 type Tab = BoardStatus | 'admins';
+
+// ---------------------------------------------------------------- dates and open days (admins only once a request is sent)
+
+function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () => void; onSaved: () => void }) {
+  const { t, f, lang } = useI18n();
+  const toast = useToast();
+  const [draft, setDraft] = useState<BoardInput>(() => ({
+    familyName: r.familyName,
+    startDate: r.startDate,
+    endDate: r.endDate,
+    slots: r.slots,
+    perSlot: r.perSlot,
+    details: r.details,
+    private: r.private,
+  }));
+  const [errors, setErrors] = useState<Errors>({});
+  const [affected, setAffected] = useState<Signup[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const warning = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (affected) warning.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [affected]);
+  const change = (next: BoardInput) => {
+    setDraft(next);
+    setAffected(null);
+    setErrors(validateBoard(next, t, ['dates']));
+  };
+
+  const save = async () => {
+    const errs = validateBoard(draft, t, ['dates']);
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    setBusy(true);
+    try {
+      // Warn once about people who are signed up on days that close or fall outside the new dates.
+      if (!affected) {
+        // Only people this change affects; ones already on a closed day were warned about before.
+        const closed = new Set(computeBlockedDates(draft));
+        const wasOpen = (s: Signup) => s.date >= r.startDate && s.date <= r.endDate && !r.blockedDates.includes(s.date);
+        const hit = (await api.admin.listSignups(r.slug)).filter(
+          (s) => s.date >= todayISO() && wasOpen(s) && (s.date < draft.startDate || s.date > draft.endDate || closed.has(s.date)),
+        );
+        if (hit.length) {
+          setAffected(hit);
+          return;
+        }
+      }
+      await api.admin.updateCalendar(r.slug, draft);
+      toast(t.calendarSaved);
+      onSaved();
+    } catch {
+      toast(t.error, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open wide onClose={onClose} title={t.editCalendar}>
+      <form
+        className="space-y-5"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <p className="text-muted">
+          <strong className="font-medium text-ink">{f('boardFor', { name: r.familyName })}</strong> · {t.editCalendarHint}
+        </p>
+        <DatesFields value={draft} onChange={change} errors={errors} />
+        <DaysFields value={draft} onChange={change} errors={errors} />
+        {affected && (
+          <div ref={warning} role="alert" className="space-y-2 rounded-2xl bg-warn-soft px-4 py-3 text-sm text-warn">
+            <p>{t.calendarAffects}</p>
+            <ul className="list-disc ps-5">
+              {affected.map((s) => (
+                <li key={s.id}>
+                  {formatDate(s.date, lang)} · {SLOT_LABELS[lang][s.slot]} · {s.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="sticky bottom-0 -mx-5 flex flex-wrap justify-end gap-2 border-t border-line bg-surface px-5 pt-3 sm:-mx-7 sm:px-7">
+          <Button variant="secondary" onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" disabled={busy || Object.keys(errors).length > 0}>
+            {busy && <Spinner />}
+            {affected ? t.saveAnyway : t.save}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
 
 // ---------------------------------------------------------------- who cooks when (admins can move or remove)
 
@@ -171,6 +269,11 @@ function SignupsSection({ r, onChanged }: { r: AdminRequest; onChanged: () => vo
                     <p className="font-medium">
                       {formatDate(s.date, lang)} · {SLOT_LABELS[lang][s.slot]}
                     </p>
+                    {(s.date < r.startDate || s.date > r.endDate || r.blockedDates.includes(s.date) || !r.slots.includes(s.slot)) && (
+                      <Badge tone="warn" className="my-1">
+                        {t.outsideSchedule}
+                      </Badge>
+                    )}
                     <p className="text-[15px]">
                       {s.name}
                       {s.phone && (
@@ -244,6 +347,7 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
   const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [declining, setDeclining] = useState(false);
+  const [editingCalendar, setEditingCalendar] = useState(false);
   const [note, setNote] = useState(r.reviewNote);
   const days = computeDays(r);
   const openDays = days.filter((d) => !r.blockedDates.includes(d.date)).length;
@@ -372,6 +476,10 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
             {t.viewBoard}
           </Link>
         )}
+        <Button variant="secondary" disabled={busy} onClick={() => setEditingCalendar(true)}>
+          <CalendarDays className="size-4" aria-hidden />
+          {t.editCalendar}
+        </Button>
         {r.manageToken && (
           <Link to={`/m/${r.manageToken}`} className={buttonClass('ghost', 'md')}>
             {t.organizerPage}
@@ -396,6 +504,17 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
           {t.deletePermanently}
         </Button>
       </div>
+
+      {editingCalendar && (
+        <CalendarDialog
+          r={r}
+          onClose={() => setEditingCalendar(false)}
+          onSaved={() => {
+            setEditingCalendar(false);
+            onChanged();
+          }}
+        />
+      )}
 
       <Dialog open={declining} onClose={() => setDeclining(false)} title={t.declineTitle}>
         <form

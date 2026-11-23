@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { ApiError, type Api, type ApiErrorCode } from './types';
-import { normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
+import { calendarPart, normalizeBoard, normalizeSignup, normalizeSignupEdit } from './validate';
 
 /**
  * Talks to the database only through the SQL functions in supabase/migrations
@@ -139,6 +139,7 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
       listSignups: (slug) => rpc('admin_list_signups', { p_slug: slug }),
       moveSignup: (id, date, slot, force) => rpc('admin_move_signup', { p_id: id, p_date: date, p_slot: slot, p_force: force }),
       removeSignup: (id) => rpc('admin_remove_signup', { p_id: id }),
+      updateCalendar: (slug, input) => rpc('admin_update_calendar', { p_slug: slug, p: calendarPart(normalizeBoard(input)) }),
       listAdmins: () => rpc('admin_list_admins'),
       addAdmin: (email) => rpc('admin_add', { p_email: email }),
       removeAdmin: (email) => rpc('admin_remove', { p_email: email }),

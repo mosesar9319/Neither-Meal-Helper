@@ -171,43 +171,104 @@ function TimeRange({ label, from, to, onChange }: { label: string; from: string;
   );
 }
 
-export function ScheduleSection({ value, onChange, errors, showCalendar = true }: SectionProps & { showCalendar?: boolean }) {
+/** Start and end dates. Used by the request form and by admins. */
+export function DatesFields({ value, onChange, errors }: SectionProps) {
+  const { t, lang } = useI18n();
+  const id = useId();
+  const days = useMemo(() => (errors?.dates ? [] : computeDays(value)), [value, errors?.dates]);
+  const open = days.filter((x) => !x.blocked).length;
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-sm font-medium">{t.dates}</legend>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor={`${id}-s`} className="mb-1 block text-[13px] text-muted">
+            {t.startDate}
+          </label>
+          <TextInput id={`${id}-s`} type="date" value={value.startDate} invalid={!!errors?.dates} onChange={(e) => onChange({ ...value, startDate: e.target.value })} required />
+        </div>
+        <div>
+          <label htmlFor={`${id}-e`} className="mb-1 block text-[13px] text-muted">
+            {t.endDate}
+          </label>
+          <TextInput id={`${id}-e`} type="date" value={value.endDate} min={value.startDate} invalid={!!errors?.dates} onChange={(e) => onChange({ ...value, endDate: e.target.value })} required />
+        </div>
+      </div>
+      {errors?.dates ? (
+        <p className="mt-1.5 text-sm text-danger">{errors.dates}</p>
+      ) : (
+        days.length > 0 && (
+          <p className="mt-1.5 text-[13px] text-muted">
+            {formatRange(value.startDate, value.endDate, lang)} · {open} {t.days}
+            {days.length - open > 0 && ` · ${days.length - open} ${t.daysClosed}`}
+          </p>
+        )
+      )}
+    </fieldset>
+  );
+}
+
+/** Shabbat / holidays / Israel switches and the tap-to-close calendar. */
+export function DaysFields({ value, onChange, errors, showCalendar = true }: SectionProps & { showCalendar?: boolean }) {
+  const { t } = useI18n();
+  const d = value.details;
+  const setD = (patch: Partial<BoardDetails>) => onChange({ ...value, details: { ...d, ...patch } });
+  const days = useMemo(() => (errors?.dates ? [] : computeDays(value)), [value, errors?.dates]);
+  return (
+    <>
+      <div className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-2">
+        <div className="py-2">
+          <Switch checked={d.skipShabbat} onChange={(v) => setD({ skipShabbat: v })} label={t.skipShabbat} />
+        </div>
+        <div className="py-2">
+          <Switch checked={d.skipHolidays} onChange={(v) => setD({ skipHolidays: v })} label={t.skipHolidays} />
+        </div>
+        <div className="py-2">
+          <Switch checked={d.inIsrael} onChange={(v) => setD({ inIsrael: v })} label={t.inIsrael} hint={t.inIsraelHint} />
+        </div>
+      </div>
+
+      {showCalendar && days.length > 0 && (
+        <div>
+          <p className="mb-3 text-[13px] text-muted">{t.calendarHint}</p>
+          <ClosableCalendar days={days} onToggle={(day) => setD(toggleDay(d, day))} />
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Shown to organizers once a request is sent: only admins change the dates and days then. */
+export function CalendarLockedNote({ value }: { value: BoardInput }) {
+  const { t, lang } = useI18n();
+  return (
+    <div className="flex items-start gap-3 rounded-2xl bg-surface-2/70 p-4">
+      <Lock className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+      <div>
+        <p className="font-medium">
+          {t.dates}: {formatRange(value.startDate, value.endDate, lang)}
+        </p>
+        <p className="text-sm text-muted">{t.calendarLocked}</p>
+      </div>
+    </div>
+  );
+}
+
+export function ScheduleSection({
+  value,
+  onChange,
+  errors,
+  showCalendar = true,
+  calendarLocked = false,
+}: SectionProps & { showCalendar?: boolean; calendarLocked?: boolean }) {
   const { t, lang } = useI18n();
   const id = useId();
   const d = value.details;
   const setD = (patch: Partial<BoardDetails>) => onChange({ ...value, details: { ...d, ...patch } });
-  const days = useMemo(() => (errors?.dates ? [] : computeDays(value)), [value, errors?.dates]);
-  const open = days.filter((x) => !x.blocked).length;
 
   return (
     <div className="space-y-6">
-      <fieldset>
-        <legend className="mb-1.5 text-sm font-medium">{t.dates}</legend>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor={`${id}-s`} className="mb-1 block text-[13px] text-muted">
-              {t.startDate}
-            </label>
-            <TextInput id={`${id}-s`} type="date" value={value.startDate} invalid={!!errors?.dates} onChange={(e) => onChange({ ...value, startDate: e.target.value })} required />
-          </div>
-          <div>
-            <label htmlFor={`${id}-e`} className="mb-1 block text-[13px] text-muted">
-              {t.endDate}
-            </label>
-            <TextInput id={`${id}-e`} type="date" value={value.endDate} min={value.startDate} invalid={!!errors?.dates} onChange={(e) => onChange({ ...value, endDate: e.target.value })} required />
-          </div>
-        </div>
-        {errors?.dates ? (
-          <p className="mt-1.5 text-sm text-danger">{errors.dates}</p>
-        ) : (
-          days.length > 0 && (
-            <p className="mt-1.5 text-[13px] text-muted">
-              {formatRange(value.startDate, value.endDate, lang)} · {open} {t.days}
-              {days.length - open > 0 && ` · ${days.length - open} ${t.daysClosed}`}
-            </p>
-          )
-        )}
-      </fieldset>
+      {calendarLocked ? <CalendarLockedNote value={value} /> : <DatesFields value={value} onChange={onChange} errors={errors} />}
 
       <Group title={t.mealsPerDay}>
         <div className="flex flex-wrap gap-2">
@@ -231,24 +292,7 @@ export function ScheduleSection({ value, onChange, errors, showCalendar = true }
         <TimeRange label={t.earlyWindow} from={d.earlyFrom} to={d.earlyTo} onChange={(f, to) => setD({ earlyFrom: f, earlyTo: to })} />
       </div>
 
-      <div className="divide-y divide-line rounded-2xl border border-line bg-surface px-4 py-2">
-        <div className="py-2">
-          <Switch checked={d.skipShabbat} onChange={(v) => setD({ skipShabbat: v })} label={t.skipShabbat} />
-        </div>
-        <div className="py-2">
-          <Switch checked={d.skipHolidays} onChange={(v) => setD({ skipHolidays: v })} label={t.skipHolidays} />
-        </div>
-        <div className="py-2">
-          <Switch checked={d.inIsrael} onChange={(v) => setD({ inIsrael: v })} label={t.inIsrael} hint={t.inIsraelHint} />
-        </div>
-      </div>
-
-      {showCalendar && days.length > 0 && (
-        <div>
-          <p className="mb-3 text-[13px] text-muted">{t.calendarHint}</p>
-          <ClosableCalendar days={days} onToggle={(day) => setD(toggleDay(d, day))} />
-        </div>
-      )}
+      {!calendarLocked && <DaysFields value={value} onChange={onChange} errors={errors} showCalendar={showCalendar} />}
     </div>
   );
 }
