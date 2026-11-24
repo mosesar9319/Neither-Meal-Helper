@@ -151,6 +151,30 @@ describe('local demo API', () => {
     expect(JSON.stringify(meals)).not.toContain('editToken');
   });
 
+  it('lets admins edit everything on a board and a cook’s details', async () => {
+    const { slug, manageToken } = await localApi.createBoard(input());
+    await localApi.admin.review(slug, 'approved', '');
+    const r = await localApi.signUp(slug, { ...contact, date: start, slot: 'dinner' });
+
+    await localApi.admin.updateBoard(slug, {
+      ...input(),
+      familyName: 'Cohen family',
+      perSlot: 2,
+      endDate: addDays(start, 8),
+      details: { ...input().details, allergies: 'nuts' },
+      private: { ...input().private, address: '9 Pine St' },
+    });
+    const m = await localApi.getManage(manageToken);
+    expect(m.board).toMatchObject({ familyName: 'Cohen family', perSlot: 2, endDate: addDays(start, 8), status: 'approved' });
+    expect(m.board.details.allergies).toBe('nuts');
+    expect(m.private.address).toBe('9 Pine St');
+
+    await localApi.admin.updateSignup(r.signupId, { name: 'Rivka L', phone: '053', email: 'RIVKA@example.com', dish: 'Rice', note: '' });
+    const s = (await localApi.admin.listSignups(slug))[0];
+    expect(s).toMatchObject({ name: 'Rivka L', phone: '053', email: 'rivka@example.com', dish: 'Rice', date: start });
+    expect(await code(localApi.admin.updateSignup(r.signupId, { name: '', phone: '1', email: 'a@example.com', dish: '', note: '' }))).toBe('invalid');
+  });
+
   it('rejects bad boards', async () => {
     expect(await code(localApi.createBoard({ ...input(), familyName: ' ' }))).toBe('invalid');
     expect(await code(localApi.createBoard({ ...input(), endDate: addDays(start, -1) }))).toBe('invalid');

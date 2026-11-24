@@ -72,6 +72,10 @@ export interface AdminApi {
   removeSignup(id: string): Promise<void>;
   /** Every meal on approved boards, in date order (upcoming only unless includePast). */
   listMeals(includePast: boolean): Promise<AdminMeal[]>;
+  /** Changes anything on a board (its status stays). No email is sent. */
+  updateBoard(slug: string, input: BoardInput): Promise<void>;
+  /** Fixes a cook's details (name, phone, email, dish, note). No email is sent. */
+  updateSignup(id: string, edit: SignupEdit): Promise<void>;
   /** Changes a board's dates and open/closed days (only those parts of the input are used). No email is sent. */
   updateCalendar(slug: string, input: BoardInput): Promise<void>;
   listAdmins(): Promise<AdminEntry[]>;

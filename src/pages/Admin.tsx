@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router';
-import { CalendarClock, CalendarDays, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Search, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
-import { DatesFields, DaysFields, validateBoard, type Errors } from '../components/BoardForm';
+import { CalendarClock, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Pencil, Phone, RotateCcw, Search, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { FamilySection, FoodSection, PrivateSection, ScheduleSection, validateBoard, type Errors } from '../components/BoardForm';
+import { SignupFields, useSignupForm } from '../components/SignupParts';
 import { BoardSummary } from '../components/BoardView';
 import { LoadingState, Page, useTitle } from '../components/Layout';
 import {
@@ -29,10 +30,10 @@ import type { AdminEntry, AdminMeal, AdminRequest, BoardInput, BoardStatus, Meal
 
 type Tab = BoardStatus | 'meals' | 'admins';
 
-// ---------------------------------------------------------------- dates and open days (admins only once a request is sent)
+// ---------------------------------------------------------------- edit everything on a request (admins)
 
-function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () => void; onSaved: () => void }) {
-  const { t, f, lang } = useI18n();
+function EditBoardDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () => void; onSaved: () => void }) {
+  const { t, lang } = useI18n();
   const toast = useToast();
   const [draft, setDraft] = useState<BoardInput>(() => ({
     familyName: r.familyName,
@@ -53,30 +54,35 @@ function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () 
   const change = (next: BoardInput) => {
     setDraft(next);
     setAffected(null);
-    setErrors(validateBoard(next, t, ['dates']));
+    if (Object.keys(errors).length) setErrors(validateBoard(next, t));
   };
 
   const save = async () => {
-    const errs = validateBoard(draft, t, ['dates']);
+    const errs = validateBoard(draft, t);
     setErrors(errs);
-    if (Object.keys(errs).length) return;
+    if (Object.keys(errs).length) {
+      toast(t.fixErrors, 'error');
+      return;
+    }
     setBusy(true);
     try {
-      // Warn once about people who are signed up on days that close or fall outside the new dates.
+      // Warn once about people this change leaves on a closed day, outside the dates, or on a meal that was removed.
       if (!affected) {
-        // Only people this change affects; ones already on a closed day were warned about before.
         const closed = new Set(computeBlockedDates(draft));
-        const wasOpen = (s: Signup) => s.date >= r.startDate && s.date <= r.endDate && !r.blockedDates.includes(s.date);
+        const wasOk = (s: Signup) => !offSchedule(r, s);
         const hit = (await api.admin.listSignups(r.slug)).filter(
-          (s) => s.date >= todayISO() && wasOpen(s) && (s.date < draft.startDate || s.date > draft.endDate || closed.has(s.date)),
+          (s) =>
+            s.date >= todayISO() &&
+            wasOk(s) &&
+            (s.date < draft.startDate || s.date > draft.endDate || closed.has(s.date) || !draft.slots.includes(s.slot)),
         );
         if (hit.length) {
           setAffected(hit);
           return;
         }
       }
-      await api.admin.updateCalendar(r.slug, draft);
-      toast(t.calendarSaved);
+      await api.admin.updateBoard(r.slug, draft);
+      toast(t.editRequestSaved);
       onSaved();
     } catch {
       toast(t.error, 'error');
@@ -85,21 +91,30 @@ function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () 
     }
   };
 
+  const sections = [
+    { title: t.stepFamily, body: <FamilySection value={draft} onChange={change} errors={errors} forAdmin /> },
+    { title: t.stepFood, body: <FoodSection value={draft} onChange={change} /> },
+    { title: t.stepSchedule, body: <ScheduleSection value={draft} onChange={change} errors={errors} /> },
+    { title: t.stepPrivate, body: <PrivateSection value={draft} onChange={change} /> },
+  ];
+
   return (
-    <Dialog open wide onClose={onClose} title={t.editCalendar}>
+    <Dialog open wide onClose={onClose} title={t.editRequestTitle}>
       <form
-        className="space-y-5"
+        className="space-y-6"
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void save();
         }}
       >
-        <p className="text-muted">
-          <strong className="font-medium text-ink">{f('boardFor', { name: r.familyName })}</strong> · {t.editCalendarHint}
-        </p>
-        <DatesFields value={draft} onChange={change} errors={errors} />
-        <DaysFields value={draft} onChange={change} errors={errors} />
+        <p className="text-muted">{t.editRequestHint}</p>
+        {sections.map((x) => (
+          <section key={x.title} className="space-y-4 border-t border-line pt-5">
+            <h3 className="text-xl font-bold">{x.title}</h3>
+            {x.body}
+          </section>
+        ))}
         {affected && (
           <div ref={warning} role="alert" className="space-y-2 rounded-2xl bg-warn-soft px-4 py-3 text-sm text-warn">
             <p>{t.calendarAffects}</p>
@@ -112,13 +127,55 @@ function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () 
             </ul>
           </div>
         )}
-        <div className="sticky bottom-0 -mx-5 flex flex-wrap justify-end gap-2 border-t border-line bg-surface px-5 pt-3 sm:-mx-7 sm:px-7">
+        <div className="sticky bottom-0 -mx-5 flex flex-wrap justify-end gap-2 border-t border-line bg-surface px-5 py-3 sm:-mx-7 sm:px-7">
           <Button variant="secondary" onClick={onClose}>
             {t.cancel}
           </Button>
-          <Button type="submit" disabled={busy || Object.keys(errors).length > 0}>
+          <Button type="submit" disabled={busy}>
             {busy && <Spinner />}
             {affected ? t.saveAnyway : t.save}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/** An admin fixing a cook's name, phone, email, dish or note. */
+function EditSignupDialog({ s, onClose, onSaved }: { s: Signup; onClose: () => void; onSaved: () => void }) {
+  const { t, f } = useI18n();
+  const toast = useToast();
+  const form = useSignupForm({ name: s.name, phone: s.phone, email: s.email, dish: s.dish, note: s.note });
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open onClose={onClose} title={f('editCookTitle', { name: s.name })}>
+      <form
+        className="space-y-5"
+        noValidate
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (!form.validate()) return;
+          setBusy(true);
+          try {
+            await api.admin.updateSignup(s.id, form.value);
+            toast(t.cookSaved);
+            onSaved();
+          } catch {
+            toast(t.error, 'error');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <SignupFields value={form.value} onChange={form.setValue} errors={form.errors} forAdmin />
+        <p className="text-sm text-muted">{t.noEmailNote}</p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {t.cancel}
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy && <Spinner />}
+            {t.save}
           </Button>
         </div>
       </form>
@@ -225,8 +282,13 @@ function SignupActions({ board, s, list, onChanged }: { board: BoardShape; s: Si
   const toast = useToast();
   const confirm = useConfirm();
   const [moving, setMoving] = useState(false);
+  const [editing, setEditing] = useState(false);
   return (
     <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+        <Pencil className="size-4" aria-hidden />
+        {t.editCook}
+      </Button>
       <Button size="sm" variant="secondary" onClick={() => setMoving(true)}>
         <CalendarClock className="size-4" aria-hidden />
         {t.moveSignup}
@@ -255,6 +317,16 @@ function SignupActions({ board, s, list, onChanged }: { board: BoardShape; s: Si
         <UserMinus className="size-4" aria-hidden />
         {t.remove}
       </Button>
+      {editing && (
+        <EditSignupDialog
+          s={s}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+        />
+      )}
       {moving && (
         <MoveDialog
           r={board}
@@ -378,7 +450,7 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
   const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [declining, setDeclining] = useState(false);
-  const [editingCalendar, setEditingCalendar] = useState(false);
+  const [editingBoard, setEditingBoard] = useState(false);
   const [note, setNote] = useState(r.reviewNote);
   const days = computeDays(r);
   const openDays = days.filter((d) => !r.blockedDates.includes(d.date)).length;
@@ -507,9 +579,9 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
             {t.viewBoard}
           </Link>
         )}
-        <Button variant="secondary" disabled={busy} onClick={() => setEditingCalendar(true)}>
-          <CalendarDays className="size-4" aria-hidden />
-          {t.editCalendar}
+        <Button variant="secondary" disabled={busy} onClick={() => setEditingBoard(true)}>
+          <Pencil className="size-4" aria-hidden />
+          {t.editRequest}
         </Button>
         {r.manageToken && (
           <Link to={`/m/${r.manageToken}`} className={buttonClass('ghost', 'md')}>
@@ -536,12 +608,12 @@ function RequestCard({ r, onChanged }: { r: AdminRequest; onChanged: () => void 
         </Button>
       </div>
 
-      {editingCalendar && (
-        <CalendarDialog
+      {editingBoard && (
+        <EditBoardDialog
           r={r}
-          onClose={() => setEditingCalendar(false)}
+          onClose={() => setEditingBoard(false)}
           onSaved={() => {
-            setEditingCalendar(false);
+            setEditingBoard(false);
             onChanged();
           }}
         />

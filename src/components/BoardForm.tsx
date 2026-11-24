@@ -47,7 +47,8 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function FamilySection({ value, onChange, errors }: SectionProps) {
+/** forAdmin: an admin editing someone else's request, so the organizer fields aren't worded as "your". */
+export function FamilySection({ value, onChange, errors, forAdmin = false }: SectionProps & { forAdmin?: boolean }) {
   const { t } = useI18n();
   const id = useId();
   const d = value.details;
@@ -79,10 +80,10 @@ export function FamilySection({ value, onChange, errors }: SectionProps) {
         </Field>
       )}
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field id={`${id}-org`} label={t.organizerName} optional>
+        <Field id={`${id}-org`} label={forAdmin ? t.organizerNameAdmin : t.organizerName} optional>
           <TextInput id={`${id}-org`} value={d.organizerName} maxLength={LIMITS.name} autoComplete="name" onChange={(e) => setD({ organizerName: e.target.value })} />
         </Field>
-        <Field id={`${id}-mail`} label={t.organizerEmail} hint={t.organizerEmailHint} optional>
+        <Field id={`${id}-mail`} label={forAdmin ? t.organizerEmailAdmin : t.organizerEmail} hint={forAdmin ? undefined : t.organizerEmailHint} optional>
           <TextInput
             id={`${id}-mail`}
             type="email"
