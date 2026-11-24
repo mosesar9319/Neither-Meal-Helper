@@ -12,7 +12,6 @@ import {
   slotDateLabel,
   useSignupForm,
 } from '../components/SignupParts';
-import { LoginPanel } from '../components/LoginPanel';
 import { Button, Card, CopyField, Dialog, buttonClass, useToast } from '../components/ui';
 import { useAccount } from '../lib/account';
 import { ApiError, api } from '../lib/api';
@@ -123,8 +122,6 @@ export function PublicBoard() {
   const { data, error, loading, reload } = useAsync(() => api.getPublicBoard(slug), [slug]);
   const [picked, setPicked] = useState<Picked | null>(null);
   const [done, setDone] = useState<Done | null>(null);
-  const { user, loading: accountLoading } = useAccount();
-  const [askSignIn, setAskSignIn] = useState(false);
   useTitle(data ? f('boardFor', { name: data.board.familyName }) : undefined);
 
   const days = useMemo(() => (data ? buildBoardDays(data.board, data.signups, todayISO()) : []), [data]);
@@ -158,7 +155,7 @@ export function PublicBoard() {
           <BoardDays
             board={data.board}
             days={days}
-            onTake={(d: DaySlots, slot) => (user || accountLoading ? setPicked({ date: d.date, slot }) : setAskSignIn(true))}
+            onTake={(d: DaySlots, slot) => setPicked({ date: d.date, slot })}
           />
         </section>
       </div>
@@ -177,10 +174,6 @@ export function PublicBoard() {
         }}
       />
       <ThanksDialog done={done} data={data} onClose={() => setDone(null)} />
-      <Dialog open={askSignIn} onClose={() => setAskSignIn(false)} title={t.loginTitle}>
-        <p className="mb-5 text-muted">{t.signInToCook}</p>
-        <LoginPanel next={`/b/${slug}`} />
-      </Dialog>
       <p className="mt-12 text-center text-sm text-muted">
         <Link to="/new" className="underline underline-offset-4 hover:text-ink">
           {t.startBoard}

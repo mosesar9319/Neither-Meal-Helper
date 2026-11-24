@@ -149,17 +149,21 @@ begin
   perform public.meal_admin_review(slug, 'approved', '');
   assert public.meal_get_public_board(slug)->'board'->>'status' = 'approved';
 
-  -- Sign-ups need a valid email.
-  begin
-    perform public.meal_sign_up(slug, contact || '{"email":""}');
-    raise exception 'expected invalid';
-  exception when raise_exception then assert sqlerrm = 'invalid', sqlerrm; end;
+  -- Only the name is required; an email, if given, must look like one.
   begin
     perform public.meal_sign_up(slug, contact || '{"email":"not-an-email"}');
     raise exception 'expected invalid';
   exception when raise_exception then assert sqlerrm = 'invalid', sqlerrm; end;
+  begin
+    perform public.meal_sign_up(slug, contact || '{"name":" "}');
+    raise exception 'expected invalid';
+  exception when raise_exception then assert sqlerrm = 'invalid', sqlerrm; end;
   edit := public.meal_sign_up(slug, contact || '{"email":" Rivka@Example.com "}')->>'editToken';
   assert public.meal_get_my_signup(edit)->'signup'->>'email' = 'rivka@example.com';
+  -- Name and dish only (no phone, no email) is fine.
+  perform public.meal_update_my_signup(edit, '{"name":"Rivka","dish":"Soup"}'::jsonb);
+  assert public.meal_get_my_signup(edit)->'signup'->>'email' = '';
+  assert public.meal_get_my_signup(edit)->'signup'->>'phone' = '';
 
   -- Managing admins: add, can't remove yourself, can remove others.
   perform public.meal_admin_add('  New@Example.com ');

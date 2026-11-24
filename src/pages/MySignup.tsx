@@ -112,7 +112,8 @@ export function MySignup() {
                   {s.dish || t.none}
                 </p>
                 <p className="mt-1 text-muted">
-                  {s.name} · <span dir="ltr">{s.phone}</span>
+                  {s.name}
+                  {s.phone && <> · <span dir="ltr">{s.phone}</span></>}
                   {s.email && <> · {s.email}</>}
                 </p>
                 {s.note && <p className="mt-2 text-[15px]">{s.note}</p>}

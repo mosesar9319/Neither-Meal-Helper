@@ -84,7 +84,8 @@ export function normalizeSignupEdit(e: SignupEdit): SignupEdit {
     dish: clip(e.dish, LIMITS.dish),
     note: clip(e.note, LIMITS.note),
   };
-  if (!out.name || !out.phone || !isEmail(out.email)) throw new ApiError('invalid', 'contact');
+  // Only the name is required; an email, if given, must look like one (it's used for the reminder).
+  if (!out.name || (out.email && !isEmail(out.email))) throw new ApiError('invalid', 'contact');
   out.email = out.email.toLowerCase();
   return out;
 }

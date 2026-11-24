@@ -170,7 +170,7 @@ function Overview({ data, days, isNew, newCount }: { data: ManageData; days: Day
         <div className="grid grid-cols-3 gap-3">
           <Stat label={t.openSlots} value={progress.total - progress.filled} />
           <Stat label={t.coveredDays} value={`${progress.coveredDays}/${progress.openDays}`} />
-          <Stat label={t.totalSignups} value={new Set(data.signups.map((s) => s.phone)).size} />
+          <Stat label={t.totalSignups} value={new Set(data.signups.map((s) => s.phone || s.email || s.name)).size} />
         </div>
         <div>
           <h3 className="mb-2 font-sans text-base font-semibold">{t.upcoming}</h3>
@@ -257,20 +257,27 @@ function Signups({ data, seenAt, token, reload }: { data: ManageData; seenAt: st
                   </p>
                   {s.dish && <p>{s.dish}</p>}
                   {s.note && <p className="text-sm text-muted">“{s.note}”</p>}
-                  <p className="text-sm text-muted">
-                    <span dir="ltr">{s.phone}</span>
-                    {s.email && <> · {s.email}</>}
-                  </p>
+                  {(s.phone || s.email) && (
+                    <p className="text-sm text-muted">
+                      {s.phone && <span dir="ltr">{s.phone}</span>}
+                      {s.phone && s.email && ' · '}
+                      {s.email}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <a href={`tel:${s.phone}`} className={buttonClass('secondary', 'sm')} aria-label={`${t.call} ${s.name}`}>
-                    <Phone className="size-4" aria-hidden />
-                    <span className="hidden sm:inline">{t.call}</span>
-                  </a>
-                  <a href={whatsappUrl('', s.phone)} target="_blank" rel="noreferrer" className={buttonClass('secondary', 'sm')} aria-label={`${t.whatsapp} ${s.name}`}>
-                    <MessageCircle className="size-4" aria-hidden />
-                    <span className="hidden sm:inline">{t.whatsapp}</span>
-                  </a>
+                  {s.phone && (
+                    <>
+                      <a href={`tel:${s.phone}`} className={buttonClass('secondary', 'sm')} aria-label={`${t.call} ${s.name}`}>
+                        <Phone className="size-4" aria-hidden />
+                        <span className="hidden sm:inline">{t.call}</span>
+                      </a>
+                      <a href={whatsappUrl('', s.phone)} target="_blank" rel="noreferrer" className={buttonClass('secondary', 'sm')} aria-label={`${t.whatsapp} ${s.name}`}>
+                        <MessageCircle className="size-4" aria-hidden />
+                        <span className="hidden sm:inline">{t.whatsapp}</span>
+                      </a>
+                    </>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"

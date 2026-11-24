@@ -126,11 +126,11 @@ export function SignupFields({
         <Field id={`${id}-name`} label={forAdmin ? t.cookName : t.yourName} error={errors.name}>
           <TextInput id={`${id}-name`} value={value.name} maxLength={LIMITS.name} autoComplete="name" invalid={!!errors.name} onChange={(e) => set({ name: e.target.value })} required />
         </Field>
-        <Field id={`${id}-phone`} label={forAdmin ? t.cookPhone : t.yourPhone} hint={forAdmin ? undefined : t.yourPhoneHint} error={errors.phone}>
-          <TextInput id={`${id}-phone`} type="tel" value={value.phone} maxLength={LIMITS.phone} autoComplete="tel" invalid={!!errors.phone} onChange={(e) => set({ phone: e.target.value })} required />
+        <Field id={`${id}-phone`} label={forAdmin ? t.cookPhone : t.yourPhone} hint={forAdmin ? undefined : t.yourPhoneHint} error={errors.phone} optional>
+          <TextInput id={`${id}-phone`} type="tel" value={value.phone} maxLength={LIMITS.phone} autoComplete="tel" invalid={!!errors.phone} onChange={(e) => set({ phone: e.target.value })} />
         </Field>
       </div>
-      <Field id={`${id}-email`} label={forAdmin ? t.email : t.yourEmail} hint={forAdmin ? undefined : t.yourEmailHint} error={errors.email}>
+      <Field id={`${id}-email`} label={forAdmin ? t.email : t.yourEmail} hint={forAdmin ? undefined : t.yourEmailHint} error={errors.email} optional>
         <TextInput
           id={`${id}-email`}
           type="email"
@@ -139,7 +139,6 @@ export function SignupFields({
           autoComplete="email"
           invalid={!!errors.email}
           onChange={(e) => set({ email: e.target.value })}
-          required
         />
       </Field>
       <Field id={`${id}-note`} label={forAdmin ? t.cookNote : t.noteToFamily} optional>
@@ -155,10 +154,9 @@ export function useSignupForm(initial: SignupEdit) {
   const [errors, setErrors] = useState<Partial<Record<'name' | 'phone' | 'email', string>>>({});
   const validate = () => {
     const e: typeof errors = {};
+    // Only the name is required. Phone and email are optional; an email, if given, must look like one.
     if (!value.name.trim()) e.name = t.required;
-    if (!value.phone.trim()) e.phone = t.required;
-    if (!value.email.trim()) e.email = t.required;
-    else if (!isEmail(value.email)) e.email = t.invalidEmail;
+    if (value.email.trim() && !isEmail(value.email)) e.email = t.invalidEmail;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
