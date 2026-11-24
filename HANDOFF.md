@@ -27,6 +27,12 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
   `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
 
+## Admin button in the top bar (2026-11-24)
+
+- Signed-in admins see a purple "ניהול" (Admin) button with a shield next to "בית" (Home), from any page, that
+  goes to `/admin`. Others never see it (checked with `meal_admin_me`). On small phones it's the shield icon only
+  (the word shows from 430px in Hebrew, and on wider screens in English, whose site name is longer).
+
 ## All meals in one place (2026-11-23)
 
 - `/admin` has a "כל הארוחות" (All meals) tab: every meal on approved boards, grouped by day from today

@@ -7,6 +7,7 @@ const en = {
   switchLang: 'עברית',
   home: 'Home',
   homeShort: 'Home',
+  adminNav: 'Admin',
   demoMode: 'Demo mode — boards are saved only in this browser.',
 
   // Home
@@ -392,6 +393,7 @@ const he: Dict = {
   switchLang: 'English',
   home: 'דף הבית',
   homeShort: 'בית',
+  adminNav: 'ניהול',
   demoMode: 'מצב הדגמה — הלוחות נשמרים רק בדפדפן הזה.',
 
   heroTitle: 'שכנות למען שכנות',
