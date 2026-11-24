@@ -27,6 +27,18 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
   `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
 
+## Cooks don't need to sign in (2026-11-24, urgent fix)
+
+- After the first real board was shared on WhatsApp, almost nobody could sign up: the board asked cooks to
+  sign in first, the emailed sign-in link opens in a different browser than WhatsApp's (so it can't finish),
+  and Google's screen says "continue to vipbambqmpjftdzouwsi.supabase.co".
+- Now anyone with the link can take a meal by filling in the form (name, phone, email). Signing in is optional
+  (a signed-in cook's name/email are filled in and the meal shows under "my meals"). **Sending a meal request
+  still requires signing in.**
+- Migration `20261124010000_cooks_no_signin.sql` (`meal_sign_up` without the sign-in check) is **applied live**.
+- To make Google sign-in look trustworthy, the owner can set a custom domain or brand the Google OAuth
+  consent screen (shared with the other app); not needed for cooks anymore.
+
 ## Admins edit anything (2026-11-24)
 
 - Each board on `/admin` has "עריכה" (Edit): one form with everything (family, food, meals and delivery times,

@@ -5,7 +5,7 @@ insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000d1', 'dana@example.com', now()),
   ('00000000-0000-0000-0000-0000000000d2', 'yossi@example.com', now());
 
--- Visitors can't send requests or sign up to cook, and can't call the account functions.
+-- Visitors can't send requests or call the account functions. They CAN sign up to cook (no sign-in needed).
 set role anon;
 do $$
 begin
@@ -18,8 +18,8 @@ begin
   exception when raise_exception then assert sqlerrm = 'signin_required', sqlerrm; end;
   begin
     perform public.meal_sign_up('whatever', '{}'::jsonb);
-    raise exception 'expected signin_required';
-  exception when raise_exception then assert sqlerrm = 'signin_required', sqlerrm; end;
+    raise exception 'expected not_found';
+  exception when raise_exception then assert sqlerrm = 'not_found', sqlerrm; end;
   begin
     perform public.meal_my_activity();
     raise exception 'anon could call meal_my_activity';
@@ -90,5 +90,28 @@ begin
   assert jsonb_array_length(a->'boards') = 0 and jsonb_array_length(a->'signups') = 0, a::text;
   assert (public.meal_link_my_items(array[current_setting('test.anon_tok')], array[]::text[]))->>'boards' = '0';
   raise notice 'ALL ACCOUNT TESTS PASSED';
+end $$;
+reset role;
+
+-- A visitor who isn't signed in signs up to cook on an approved board.
+reset role;
+set request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000d1"}';
+set role authenticated;
+select set_config('test.anon_slug', public.meal_create_board(jsonb_build_object(
+  'familyName', 'AnonCook', 'startDate', current_date + 1, 'endDate', current_date + 3,
+  'slots', '["dinner"]'::jsonb, 'perSlot', 1, 'blockedDates', '[]'::jsonb, 'details', '{}'::jsonb,
+  'private', '{"address":"","instructions":"","phone":"","organizerEmail":""}'::jsonb))->>'slug', false);
+reset role;
+select public.test_approve(current_setting('test.anon_slug'));
+set request.jwt.claims = '';
+set role anon;
+do $$
+declare r jsonb;
+begin
+  r := public.meal_sign_up(current_setting('test.anon_slug'), jsonb_build_object(
+    'name', 'Neighbor', 'phone', '050', 'email', 'neighbor@example.com', 'dish', '', 'note', '',
+    'date', current_date + 1, 'slot', 'dinner'));
+  assert r->>'editToken' is not null, r::text;
+  raise notice 'ANONYMOUS COOK SIGN-UP WORKS';
 end $$;
 reset role;
