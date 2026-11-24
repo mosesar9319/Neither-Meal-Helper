@@ -36,6 +36,10 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   (a signed-in cook's name/email are filled in and the meal shows under "my meals"). **Sending a meal request
   still requires signing in.**
 - Migration `20261124010000_cooks_no_signin.sql` (`meal_sign_up` without the sign-in check) is **applied live**.
+- Then (owner's request) cooks only have to give their **name**; "what are you bringing" stays first, and phone
+  and email are optional (an email still gets the evening-before reminder). Migration
+  `20261124020000_cook_name_only.sql` (looser `validate_contact`, phone may be empty) is **applied live**.
+  Organizer/admin pages hide call/WhatsApp buttons when there's no phone.
 - To make Google sign-in look trustworthy, the owner can set a custom domain or brand the Google OAuth
   consent screen (shared with the other app); not needed for cooks anymore.
 

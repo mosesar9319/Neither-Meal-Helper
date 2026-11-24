@@ -67,9 +67,9 @@ begin
     perform public.meal_sign_up(slug, contact || jsonb_build_object('date', start + 30, 'slot', 'lunch'));
     raise exception 'expected day_closed';
   exception when raise_exception then assert sqlerrm = 'day_closed', sqlerrm; end;
-  -- Missing phone is rejected.
+  -- A name is required (phone and email are optional).
   begin
-    perform public.meal_sign_up(slug, (contact - 'phone') || jsonb_build_object('date', start, 'slot', 'lunch'));
+    perform public.meal_sign_up(slug, (contact - 'name') || jsonb_build_object('date', start, 'slot', 'lunch'));
     raise exception 'expected invalid';
   exception when raise_exception then assert sqlerrm = 'invalid', sqlerrm; end;
 

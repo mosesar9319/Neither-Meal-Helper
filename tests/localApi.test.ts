@@ -55,8 +55,7 @@ describe('local demo API', () => {
     expect(await code(localApi.signUp(slug, { ...contact, date: start, slot: 'dinner' }))).toBe('slot_full');
     expect(await code(localApi.signUp(slug, { ...contact, date: addDays(start, 2), slot: 'lunch' }))).toBe('day_closed');
     expect(await code(localApi.signUp(slug, { ...contact, date: start, slot: 'breakfast' }))).toBe('day_closed');
-    expect(await code(localApi.signUp(slug, { ...contact, phone: ' ', date: start, slot: 'lunch' }))).toBe('invalid');
-    expect(await code(localApi.signUp(slug, { ...contact, email: '', date: start, slot: 'lunch' }))).toBe('invalid');
+    expect(await code(localApi.signUp(slug, { ...contact, name: ' ', date: start, slot: 'lunch' }))).toBe('invalid');
     expect(await code(localApi.signUp(slug, { ...contact, email: 'nope', date: start, slot: 'lunch' }))).toBe('invalid');
 
     const after = await localApi.getPublicBoard(slug);
