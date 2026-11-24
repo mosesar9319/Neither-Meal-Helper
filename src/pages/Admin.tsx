@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router';
-import { CalendarClock, CalendarDays, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { CalendarClock, CalendarDays, Check, ChevronDown, EyeOff, ExternalLink, Info, LogOut, Phone, RotateCcw, Search, Trash2, Undo2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { DatesFields, DaysFields, validateBoard, type Errors } from '../components/BoardForm';
 import { BoardSummary } from '../components/BoardView';
 import { LoadingState, Page, useTitle } from '../components/Layout';
@@ -13,6 +13,7 @@ import {
   Segmented,
   Select,
   Spinner,
+  Switch,
   TextArea,
   TextInput,
   buttonClass,
@@ -21,12 +22,12 @@ import {
   useToast,
 } from '../components/ui';
 import { ApiError, api } from '../lib/api';
-import { formatDate, formatRange, todayISO } from '../lib/dates';
+import { addDays, formatDate, formatRange, todayISO } from '../lib/dates';
 import { SLOT_LABELS, useI18n } from '../lib/i18n';
 import { computeBlockedDates, computeDays } from '../lib/schedule';
-import type { AdminEntry, AdminRequest, BoardInput, BoardStatus, MealSlot, Signup } from '../lib/types';
+import type { AdminEntry, AdminMeal, AdminRequest, BoardInput, BoardStatus, MealSlot, Signup } from '../lib/types';
 
-type Tab = BoardStatus | 'admins';
+type Tab = BoardStatus | 'meals' | 'admins';
 
 // ---------------------------------------------------------------- dates and open days (admins only once a request is sent)
 
@@ -127,7 +128,13 @@ function CalendarDialog({ r, onClose, onSaved }: { r: AdminRequest; onClose: () 
 
 // ---------------------------------------------------------------- who cooks when (admins can move or remove)
 
-function MoveDialog({ r, s, list, onClose, onMoved }: { r: AdminRequest; s: Signup; list: Signup[]; onClose: () => void; onMoved: () => void }) {
+/** The parts of a board the move dialog needs (an admin request, or the board of a meal in "all meals"). */
+type BoardShape = Pick<AdminRequest, 'startDate' | 'endDate' | 'slots' | 'perSlot' | 'blockedDates' | 'details'>;
+
+const offSchedule = (b: BoardShape, s: Signup) =>
+  s.date < b.startDate || s.date > b.endDate || b.blockedDates.includes(s.date) || !b.slots.includes(s.slot);
+
+function MoveDialog({ r, s, list, onClose, onMoved }: { r: BoardShape; s: Signup; list: Signup[]; onClose: () => void; onMoved: () => void }) {
   const { t, f, lang } = useI18n();
   const toast = useToast();
   const [date, setDate] = useState(s.date);
@@ -212,13 +219,88 @@ function MoveDialog({ r, s, list, onClose, onMoved }: { r: AdminRequest; s: Sign
   );
 }
 
-function SignupsSection({ r, onChanged }: { r: AdminRequest; onChanged: () => void }) {
+/** "Move to another day" and "Remove" for one sign-up. `list` is the board's sign-ups (for "places taken"). */
+function SignupActions({ board, s, list, onChanged }: { board: BoardShape; s: Signup; list: Signup[]; onChanged: () => void }) {
   const { t, f, lang } = useI18n();
   const toast = useToast();
   const confirm = useConfirm();
+  const [moving, setMoving] = useState(false);
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant="secondary" onClick={() => setMoving(true)}>
+        <CalendarClock className="size-4" aria-hidden />
+        {t.moveSignup}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="text-danger"
+        onClick={async () => {
+          const ok = await confirm({
+            title: t.remove,
+            body: f('removeSignupConfirm', { name: s.name, date: formatDate(s.date, lang) }),
+            confirmLabel: t.remove,
+            danger: true,
+          });
+          if (!ok) return;
+          try {
+            await api.admin.removeSignup(s.id);
+            toast(t.removedSignupToast);
+            onChanged();
+          } catch {
+            toast(t.error, 'error');
+          }
+        }}
+      >
+        <UserMinus className="size-4" aria-hidden />
+        {t.remove}
+      </Button>
+      {moving && (
+        <MoveDialog
+          r={board}
+          s={s}
+          list={list}
+          onClose={() => setMoving(false)}
+          onMoved={() => {
+            setMoving(false);
+            onChanged();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Name, phone and email of a cook, each tappable. */
+function CookContact({ s }: { s: Signup }) {
+  return (
+    <p className="text-[15px]">
+      <span className="font-medium">{s.name}</span>
+      {s.phone && (
+        <>
+          {' · '}
+          <a href={`tel:${s.phone}`} dir="ltr" className="underline underline-offset-4">
+            {s.phone}
+          </a>
+        </>
+      )}
+      {s.email && (
+        <>
+          {' · '}
+          <a href={`mailto:${s.email}`} dir="ltr" className="break-all underline underline-offset-4">
+            {s.email}
+          </a>
+        </>
+      )}
+    </p>
+  );
+}
+
+function SignupsSection({ r, onChanged }: { r: AdminRequest; onChanged: () => void }) {
+  const { t, f, lang } = useI18n();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [list, setList] = useState<Signup[] | null>(null);
-  const [moving, setMoving] = useState<Signup | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -269,71 +351,20 @@ function SignupsSection({ r, onChanged }: { r: AdminRequest; onChanged: () => vo
                     <p className="font-medium">
                       {formatDate(s.date, lang)} · {SLOT_LABELS[lang][s.slot]}
                     </p>
-                    {(s.date < r.startDate || s.date > r.endDate || r.blockedDates.includes(s.date) || !r.slots.includes(s.slot)) && (
+                    {offSchedule(r, s) && (
                       <Badge tone="warn" className="my-1">
                         {t.outsideSchedule}
                       </Badge>
                     )}
-                    <p className="text-[15px]">
-                      {s.name}
-                      {s.phone && (
-                        <>
-                          {' · '}
-                          <a href={`tel:${s.phone}`} dir="ltr" className="underline underline-offset-4">
-                            {s.phone}
-                          </a>
-                        </>
-                      )}
-                    </p>
+                    <CookContact s={s} />
                     {s.dish && <p className="text-sm text-muted">{s.dish}</p>}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => setMoving(s)}>
-                      <CalendarClock className="size-4" aria-hidden />
-                      {t.moveSignup}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-danger"
-                      onClick={async () => {
-                        const ok = await confirm({
-                          title: t.remove,
-                          body: f('removeSignupConfirm', { name: s.name, date: formatDate(s.date, lang) }),
-                          confirmLabel: t.remove,
-                          danger: true,
-                        });
-                        if (!ok) return;
-                        try {
-                          await api.admin.removeSignup(s.id);
-                          toast(t.removedSignupToast);
-                          changed();
-                        } catch {
-                          toast(t.error, 'error');
-                        }
-                      }}
-                    >
-                      <UserMinus className="size-4" aria-hidden />
-                      {t.remove}
-                    </Button>
-                  </div>
+                  <SignupActions board={r} s={s} list={list} onChanged={changed} />
                 </li>
               ))}
             </ul>
           )}
         </div>
-      )}
-      {moving && list && (
-        <MoveDialog
-          r={r}
-          s={moving}
-          list={list}
-          onClose={() => setMoving(null)}
-          onMoved={() => {
-            setMoving(null);
-            changed();
-          }}
-        />
       )}
     </div>
   );
@@ -573,6 +604,85 @@ function RequestList({ status, onCount }: { status: BoardStatus; onCount: (n: nu
   );
 }
 
+// ---------------------------------------------------------------- all meals, in date order (admins)
+
+function AllMeals() {
+  const { t, f, lang } = useI18n();
+  const [includePast, setIncludePast] = useState(false);
+  const [query, setQuery] = useState('');
+  const [list, setList] = useState<AdminMeal[] | null>(null);
+  const [error, setError] = useState(false);
+  const load = useCallback(async () => {
+    try {
+      setList(await api.admin.listMeals(includePast));
+      setError(false);
+    } catch {
+      setError(true);
+    }
+  }, [includePast]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const today = todayISO();
+  const tomorrow = addDays(today, 1);
+  const q = query.trim().toLowerCase();
+  const shown = (list ?? []).filter(
+    (m) => !q || [m.board.familyName, m.name, m.phone, m.email, m.dish].some((x) => x.toLowerCase().includes(q)),
+  );
+  const byDate = new Map<string, AdminMeal[]>();
+  for (const m of shown) byDate.set(m.date, [...(byDate.get(m.date) ?? []), m]);
+
+  return (
+    <div className="space-y-5">
+      <Card className="space-y-3 p-4 sm:p-5">
+        <div className="relative">
+          <Search className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+          <TextInput type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.mealsSearch} aria-label={t.mealsSearch} className="ps-10" />
+        </div>
+        <Switch checked={includePast} onChange={setIncludePast} label={t.showPastMeals} />
+        {list && <p className="text-sm text-muted">{f('mealsCount', { n: shown.length })}</p>}
+      </Card>
+
+      {error ? (
+        <p className="py-10 text-center text-danger">{t.error}</p>
+      ) : !list ? (
+        <LoadingState />
+      ) : shown.length === 0 ? (
+        <Card className="p-10 text-center text-muted">{list.length ? t.noMealsMatch : t.noMeals}</Card>
+      ) : (
+        [...byDate.entries()].map(([date, meals]) => (
+          <section key={date} aria-label={formatDate(date, lang)}>
+            <h2 className={cx('mb-2 flex items-center gap-2 text-lg font-bold', date < today && 'text-muted')}>
+              {formatDate(date, lang)}
+              {date === today && <Badge tone="primary">{t.today}</Badge>}
+              {date === tomorrow && <Badge tone="accent">{t.tomorrow}</Badge>}
+            </h2>
+            <Card as="div" className="divide-y divide-line px-4 sm:px-5">
+              {meals.map((m) => (
+                <div key={m.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="flex flex-wrap items-center gap-2">
+                      <Badge tone="neutral">{SLOT_LABELS[lang][m.slot]}</Badge>
+                      <Link to={`/b/${m.board.slug}`} className="font-semibold underline-offset-4 hover:underline">
+                        {f('familyLabel', { name: m.board.familyName })}
+                      </Link>
+                      {offSchedule(m.board, m) && <Badge tone="warn">{t.outsideSchedule}</Badge>}
+                    </p>
+                    <CookContact s={m} />
+                    {m.dish && <p className="text-sm text-muted">{m.dish}</p>}
+                  </div>
+                  <SignupActions board={m.board} s={m} list={(list ?? []).filter((x) => x.board.slug === m.board.slug)} onChanged={load} />
+                </div>
+              ))}
+            </Card>
+          </section>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------- admins
 
 function Admins({ me }: { me: string }) {
@@ -713,6 +823,7 @@ export function Admin() {
     { id: 'approved', label: t.tabApproved },
     { id: 'declined', label: t.tabDeclined },
     { id: 'offline', label: t.tabOffline },
+    { id: 'meals', label: t.tabMeals },
     { id: 'admins', label: t.tabAdmins },
   ];
 
@@ -759,6 +870,8 @@ export function Admin() {
       <div role="tabpanel">
         {tab === 'admins' ? (
           <Admins me={state.email} />
+        ) : tab === 'meals' ? (
+          <AllMeals />
         ) : (
           <RequestList key={tab} status={tab} onCount={tab === 'pending' ? onPendingCount : onOtherCount} />
         )}

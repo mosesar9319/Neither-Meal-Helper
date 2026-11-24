@@ -7,6 +7,7 @@ const en = {
   switchLang: 'עברית',
   home: 'Home',
   homeShort: 'Home',
+  adminNav: 'Admin',
   demoMode: 'Demo mode — boards are saved only in this browser.',
 
   // Home
@@ -352,6 +353,16 @@ const en = {
   calendarSaved: 'Saved. No email was sent.',
   calendarAffects: 'These sign-ups are on days that will be closed or outside the new dates. They are kept and no one is emailed; you can move or remove them afterwards:',
   saveAnyway: 'Save anyway',
+  // All meals (admins)
+  tabMeals: 'All meals',
+  mealsSearch: 'Search a family or a cook',
+  showPastMeals: 'Show past meals',
+  noMeals: 'No meals yet.',
+  noMealsMatch: 'No meals match your search.',
+  mealsCount: '{n} meals',
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  familyLabel: 'Family {name}',
   statusOfflineTitle: 'This board was taken offline',
   statusOfflineText: 'The site’s administrators took this board offline, so neighbors can’t see it or sign up. Contact them if you think this is a mistake.',
 
@@ -382,6 +393,7 @@ const he: Dict = {
   switchLang: 'English',
   home: 'דף הבית',
   homeShort: 'בית',
+  adminNav: 'ניהול',
   demoMode: 'מצב הדגמה — הלוחות נשמרים רק בדפדפן הזה.',
 
   heroTitle: 'שכנות למען שכנות',
@@ -713,6 +725,15 @@ const he: Dict = {
   calendarSaved: 'נשמר. לא נשלח מייל.',
   calendarAffects: 'ההרשמות האלה נמצאות בימים שייסגרו או מחוץ לתאריכים החדשים. הן נשמרות ולא נשלח מייל, ואפשר להעביר או להסיר אותן אחר כך:',
   saveAnyway: 'לשמור בכל זאת',
+  tabMeals: 'כל הארוחות',
+  mealsSearch: 'חיפוש משפחה או מבשל/ת',
+  showPastMeals: 'להציג גם ארוחות שעברו',
+  noMeals: 'עדיין אין ארוחות.',
+  noMealsMatch: 'אין ארוחות שמתאימות לחיפוש.',
+  mealsCount: '{n} ארוחות',
+  today: 'היום',
+  tomorrow: 'מחר',
+  familyLabel: 'משפחת {name}',
   statusOfflineTitle: 'הלוח הוסר מהאתר',
   statusOfflineText: 'מנהלי האתר הסירו את הלוח, כך שהשכנות לא רואות אותו ולא יכולות להירשם. אם נראה לך שזו טעות, פנו אליהם.',
 

@@ -139,6 +139,7 @@ export function createSupabaseApi(url: string, anonKey: string, emailEnabled = f
       listSignups: (slug) => rpc('admin_list_signups', { p_slug: slug }),
       moveSignup: (id, date, slot, force) => rpc('admin_move_signup', { p_id: id, p_date: date, p_slot: slot, p_force: force }),
       removeSignup: (id) => rpc('admin_remove_signup', { p_id: id }),
+      listMeals: (includePast) => rpc('admin_list_meals', { p_include_past: includePast }),
       updateCalendar: (slug, input) => rpc('admin_update_calendar', { p_slug: slug, p: calendarPart(normalizeBoard(input)) }),
       listAdmins: () => rpc('admin_list_admins'),
       addAdmin: (email) => rpc('admin_add', { p_email: email }),

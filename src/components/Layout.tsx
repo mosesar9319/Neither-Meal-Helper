@@ -1,6 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Outlet, ScrollRestoration, useLocation } from 'react-router';
-import { House, Info, SearchX, UserRound } from 'lucide-react';
+import { House, Info, SearchX, ShieldCheck, UserRound } from 'lucide-react';
 import { useAccount } from '../lib/account';
 import { api } from '../lib/api';
 import { useI18n } from '../lib/i18n';
@@ -25,6 +25,41 @@ export function Logo({ className = 'size-9' }: { className?: string }) {
       <rect x="12" y="27" width="40" height="5" rx="2.5" fill="var(--bg)" />
       <path d="M26 22c0-3 3-3 3-6M35 22c0-3 3-3 3-6" stroke="var(--bg)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
     </svg>
+  );
+}
+
+/** "Admin" button in the top bar, shown only to signed-in admins: back to the admin page from anywhere. */
+function AdminLink() {
+  const { t, lang } = useI18n();
+  const { user } = useAccount();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const email = user?.email ?? '';
+  useEffect(() => {
+    if (!email) {
+      setIsAdmin(false);
+      return;
+    }
+    let alive = true;
+    api.admin.me().then(
+      (m) => alive && setIsAdmin(m.isAdmin),
+      () => alive && setIsAdmin(false),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [email]);
+  if (!isAdmin) return null;
+  return (
+    <Link
+      to="/admin"
+      aria-label={t.adminTitle}
+      title={t.adminTitle}
+      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-primary/30 bg-primary-soft px-2.5 text-sm font-medium text-primary hover:bg-primary-soft/70 sm:px-3"
+    >
+      <ShieldCheck className="size-4" aria-hidden />
+      {/* The English site name is longer, so the word shows only on wider screens there. */}
+      <span className={lang === 'he' ? 'hidden min-[430px]:inline' : 'hidden sm:inline'}>{t.adminNav}</span>
+    </Link>
   );
 }
 
@@ -86,6 +121,7 @@ export function Layout() {
             <span className="hidden min-[370px]:inline sm:hidden">{t.homeShort}</span>
             <span className="hidden sm:inline">{t.home}</span>
           </Link>
+          <AdminLink />
           <AccountLink />
           <button
             type="button"

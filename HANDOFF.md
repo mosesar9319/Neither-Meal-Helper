@@ -27,6 +27,21 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
   `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
 
+## Admin button in the top bar (2026-11-24)
+
+- Signed-in admins see a purple "ניהול" (Admin) button with a shield next to "בית" (Home), from any page, that
+  goes to `/admin`. Others never see it (checked with `meal_admin_me`). On small phones it's the shield icon only
+  (the word shows from 430px in Hebrew, and on wider screens in English, whose site name is longer).
+
+## All meals in one place (2026-11-23)
+
+- `/admin` has a "כל הארוחות" (All meals) tab: every meal on approved boards, grouped by day from today
+  ("היום"/"מחר" marked), each with the family (links to the board), the cook's name, phone and email (tap to
+  call or write), and the dish. Search by family, cook, phone, email or dish; a switch shows past meals too.
+  "העברה ליום אחר" and "הסרה" work here as on each board. Emails are only shown, never sent automatically.
+- Migration `20261123030000_admin_all_meals.sql` (`meal_admin_list_meals`, admin-only, read-only) is
+  **applied live**. Tests: `tests/sql/admin_meals.test.sql`, `tests/localApi.test.ts`.
+
 ## Calendar belongs to admins once a request is sent (2026-11-23)
 
 - Organizers choose the dates and open/closed days when they send a request. After that only admins change them:
@@ -39,8 +54,7 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   No emails.
 - Migrations: `20261123010000_admin_calendar.sql` (`meal_admin_update_calendar`, **applied live**) and
   `20261123020000_organizer_calendar_lock.sql` (organizers' `meal_update_board` keeps the calendar unless declined).
-  **Apply the lock migration when the PR merges**, not before: until then the live organizer page still shows the
-  calendar editor. Tests: `tests/sql/admin_calendar.test.sql`, `tests/localApi.test.ts`.
+  Both **applied live** (the lock right after PR #5 merged). Tests: `tests/sql/admin_calendar.test.sql`, `tests/localApi.test.ts`.
 
 ## Sign-in, take offline, delete (2026-11-22, PR #4)
 
