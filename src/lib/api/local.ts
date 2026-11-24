@@ -368,6 +368,31 @@ export const localApi: Api = {
         })
         .sort((a, b) => a.date.localeCompare(b.date) || order[a.slot] - order[b.slot] || a.createdAt.localeCompare(b.createdAt));
     },
+    async updateBoard(slug, input) {
+      const db = load();
+      const row = db.boards.find((r) => r.board.slug === slug);
+      if (!row) throw new ApiError('not_found');
+      const c = normalizeBoard(input);
+      row.board = {
+        ...row.board,
+        familyName: c.familyName,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        slots: c.slots,
+        perSlot: c.perSlot,
+        blockedDates: c.blockedDates,
+        details: c.details,
+      };
+      row.private = c.private;
+      save(db);
+    },
+    async updateSignup(id, edit) {
+      const db = load();
+      const s = db.boards.flatMap((r) => r.signups).find((x) => x.id === id);
+      if (!s) throw new ApiError('not_found');
+      Object.assign(s, normalizeSignupEdit(edit));
+      save(db);
+    },
     async updateCalendar(slug, input) {
       const db = load();
       const row = db.boards.find((r) => r.board.slug === slug);

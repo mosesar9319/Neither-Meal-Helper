@@ -106,28 +106,31 @@ export function SignupFields({
   value,
   onChange,
   errors,
+  forAdmin = false,
 }: {
   value: SignupEdit;
   onChange: (v: SignupEdit) => void;
   errors: Partial<Record<'name' | 'phone' | 'email', string>>;
+  /** An admin fixing a cook's details: neutral labels, no hints meant for the cook. */
+  forAdmin?: boolean;
 }) {
   const { t } = useI18n();
   const id = useId();
   const set = (patch: Partial<SignupEdit>) => onChange({ ...value, ...patch });
   return (
     <div className="space-y-4">
-      <Field id={`${id}-dish`} label={t.dish} optional>
+      <Field id={`${id}-dish`} label={forAdmin ? t.cookDish : t.dish} optional>
         <TextInput id={`${id}-dish`} value={value.dish} maxLength={LIMITS.dish} placeholder={t.dishPlaceholder} onChange={(e) => set({ dish: e.target.value })} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id={`${id}-name`} label={t.yourName} error={errors.name}>
+        <Field id={`${id}-name`} label={forAdmin ? t.cookName : t.yourName} error={errors.name}>
           <TextInput id={`${id}-name`} value={value.name} maxLength={LIMITS.name} autoComplete="name" invalid={!!errors.name} onChange={(e) => set({ name: e.target.value })} required />
         </Field>
-        <Field id={`${id}-phone`} label={t.yourPhone} hint={t.yourPhoneHint} error={errors.phone}>
+        <Field id={`${id}-phone`} label={forAdmin ? t.cookPhone : t.yourPhone} hint={forAdmin ? undefined : t.yourPhoneHint} error={errors.phone}>
           <TextInput id={`${id}-phone`} type="tel" value={value.phone} maxLength={LIMITS.phone} autoComplete="tel" invalid={!!errors.phone} onChange={(e) => set({ phone: e.target.value })} required />
         </Field>
       </div>
-      <Field id={`${id}-email`} label={t.yourEmail} hint={t.yourEmailHint} error={errors.email}>
+      <Field id={`${id}-email`} label={forAdmin ? t.email : t.yourEmail} hint={forAdmin ? undefined : t.yourEmailHint} error={errors.email}>
         <TextInput
           id={`${id}-email`}
           type="email"
@@ -139,7 +142,7 @@ export function SignupFields({
           required
         />
       </Field>
-      <Field id={`${id}-note`} label={t.noteToFamily} optional>
+      <Field id={`${id}-note`} label={forAdmin ? t.cookNote : t.noteToFamily} optional>
         <TextArea id={`${id}-note`} rows={2} value={value.note} maxLength={LIMITS.note} onChange={(e) => set({ note: e.target.value })} />
       </Field>
     </div>

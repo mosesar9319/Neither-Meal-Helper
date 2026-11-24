@@ -27,6 +27,17 @@ Live site: **https://neighborly-meal-circle.netlify.app**
   `meal_admin_remove_signup`; admin-only, not callable by visitors) is **applied live**. Tests:
   `tests/sql/admin_signups.test.sql`, `tests/localApi.test.ts`.
 
+## Admins edit anything (2026-11-24)
+
+- Each board on `/admin` has "עריכה" (Edit): one form with everything (family, food, meals and delivery times,
+  dates and open/closed days, address/instructions/phone/organizer email). It replaced the separate "Edit dates
+  and days" button. Saving keeps the status. If the change leaves cooks on a closed day, outside the dates or on
+  a removed meal, the form names them first ("שמירה בכל זאת" to save anyway).
+- Each cook (in a board's "הרשמות" list and in "כל הארוחות") has "עריכה" for name, phone, email, dish and note.
+- No emails for either. Migration `20261124000000_admin_edit_board.sql` (`meal_admin_update_board`,
+  `meal_admin_update_signup`; admin-only) is **applied live**. Tests: `tests/sql/admin_edit_board.test.sql`,
+  `tests/localApi.test.ts`.
+
 ## Admin button in the top bar (2026-11-24)
 
 - Signed-in admins see a purple "ניהול" (Admin) button with a shield next to "בית" (Home), from any page, that
